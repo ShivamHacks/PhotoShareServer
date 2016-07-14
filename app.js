@@ -38,3 +38,5 @@ module.exports = app;
 
 // cool git tricks: add gitignore command (do this in project folder): touch .gitignore 
 // cool git tricks: to redo all git (in case you screwed up initial commit b/c didn't do gitignore properly) do : rm -rf .git/
+
+// currently encrypting phone numbers, so need to decrypt anytime need to do anything.
