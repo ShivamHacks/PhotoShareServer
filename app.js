@@ -36,4 +36,5 @@ app.use(function(err, req, res, next) {
 
 module.exports = app;
 
-// cool tricks: add gitignore command (do this in project folder): touch .gitignore 
+// cool git tricks: add gitignore command (do this in project folder): touch .gitignore 
+// cool git tricks: to redo all git (in case you screwed up initial commit b/c didn't do gitignore properly) do : rm -rf .git/
