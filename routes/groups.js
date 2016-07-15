@@ -67,13 +67,37 @@ router.post('/createEvent', function(req, res, next) {
 router.post('/deleteEvent', function(req, res, next) {
 	var groupID = req.body.groupID;
 	var eventID = req.body.eventID;
-	var params = { $pull: { events: { id: eventID } } };
-	dbGroups.update({ _id: ObjectId(groupID) }, params, function(success, doc) {
-		if (success) res.send(JSON.stringify(doc));
-		else res.send('error deleting event');
+	dbGroups.get({ _id: ObjectId(groupID) }, function(success, group) {
+		if (success) {
+			if (_.isEmpty(group)) { res.send('No group with this id'); }
+			else {
+				if (req.body.userID == group.createdBy) {
+					var params = { $pull: { events: { id: eventID } } };
+					dbGroups.update({ _id: ObjectId(groupID) }, params, function(success, doc) {
+						if (success) res.send(JSON.stringify(doc));
+						else res.send('error deleting event');
+					});
+				} else { res.send('You are not authorized to delete event'); }
+			}
+		} else { res.send('Unknown error'); }
 	});
 });
 
+router.post('/deleteGroup', function(req, res, next) {
+	var groupID = req.body.groupID;
+	dbGroups.get({ _id: ObjectId(groupID) }, function(success, group) {
+		if (success) {
+			if (_.isEmpty(group)) { res.send('No group with this id'); }
+			else {
+				if (req.body.userID == group.createdBy) {
+					db.remove({ _id: ObjectId(groupID) }, function(success) {});
+				} else { res.send('You are not authorized to delete event'); }
+			}
+		} else { res.send('Unknown error'); }
+	});
+});
+
+// need to fix this a little
 router.post('/editGroup', function(req, res, next) {
 	var attributesToEdit = req.body.attributesToEdit;
 	var groupID = req.body.groupID;
