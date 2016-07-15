@@ -78,10 +78,11 @@ router.post('/signup', function(req, res, next) {
 			verficationCode: verficationGen.generate({ length: 6, charset: 'numeric' })
 		}, function(success, doc) {
 			if (success) {
-				sendText(phoneNumber, doc.verficationCode, function(sent) {
+				/*sendText(phoneNumber, doc.verficationCode, function(sent) {
 					if (sent) res.send(JSON.stringify(doc));
 					else res.send('Error sending message');
-				});
+				});*/
+				res.send(JSON.stringify(doc));
 			} else { res.send('Unknown error'); }
 		});
 	} else { res.send('No phone number and/or password provided'); }

@@ -20,7 +20,7 @@ module.exports = function(collection) {
 	exports.put = function(obj, callback) {
 		MongoClient.connect(url, function(err, db) {
 			db.collection(collection).insert(obj, function(err, result) {
-				if (err) callback(false, null);
+				if (err) callback(false, err);
 				else callback(true, obj);
 				db.close();
 			});
@@ -44,6 +44,8 @@ module.exports = function(collection) {
 	exports.update = function(query, params, callback) {
 		MongoClient.connect(url, function(err, db) {
 			db.collection(collection).findAndModify(query, [], params, { new: true }, function(err,doc) {
+				//console.log(err);
+				//console.log(doc);
 				if (err) callback(false, err);
 				else callback(true, doc.value);
 				db.close();

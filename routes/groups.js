@@ -4,28 +4,25 @@ var router = express.Router();
 var dbUsers = require('../helpers/dbInterface')('users');
 var dbGroups = require('../helpers/dbInterface')('groups');
 var ObjectId = require('mongodb').ObjectID;
+var shortid = require('shortid');
 
 var _ = require('underscore');
 var encryption = require('../helpers/encryption');
 
-router.get('/', function(req, res, next) {
-	// photo stuff here
-	// token = req.decoded
-  	res.send('respond with a photo resource');
-});
+// only creator can delete group
 
-router.post('/new', function(req, res, next) {
-	var name = req.body.name;
+router.post('/newGroup', function(req, res, next) {
 	var members = req.body.members;  // list of phone numbers
-	var createdBy = req.body.userID;
-
-	// how to know that group doesn't exist - ignore that for now
-	// TODO, notify users that they have been added to a group
-	// TODO, allow users to leave a group
 
 	getMembers(members, function(success, results) {
 		if (success) {
-			var group = { name: name, members: results.existingUsers, createdBy: createdBy, createdAt: Date.now() };
+			var group = { 
+				name: req.body.groupName, 
+				members: results.existingUsers, 
+				createdBy: req.body.userID, 
+				createdAt: Date.now(), 
+				events: [] 
+			};
 			dbGroups.put(group, function(success, doc) {
 				if (success) res.send(JSON.stringify(doc));
 				else res.send('error adding group');
@@ -33,17 +30,61 @@ router.post('/new', function(req, res, next) {
 		}
 	});
 
-	// For now, this function is done
+	// TODO: push groupID to user's groups array
 
-	// need to process members: identify who is a user for our app, and who isn't (b/c its only by number, so people can put in number without knowing whether its a user or not)
-	// people who aren't users can have access to photos online?
-	// people who aren't users but become users must have access to group once they are created. How?
-	/*if (name && members && createdBy) {
-		dbPut({
-			name: name,
-			members: 
-		})
-	}*/
+});
+
+router.post('/addMembers', function(req, res, next) {
+	var groupID = req.body.groupID;
+	var members = req.body.members;
+	getMembers(members, function(success, results) {
+		if (success) {
+			var params = { $push: { members: { $each: results.existingUsers } } };
+			dbGroups.update({ _id: ObjectId(groupID) }, params, function(success, doc) {
+				if (success) res.send(JSON.stringify(doc));
+				else res.send('error updating group members');
+			});
+		}
+	});
+});
+
+router.post('/createEvent', function(req, res, next) {
+	var groupID = req.body.groupID;
+	var params = { $push: { 
+		events: { 
+			name: req.body.eventName, 
+			id: shortid.generate(), 
+			createdAt: Date.now(),
+			createdBy: req.body.userID
+		} 
+	} };
+	dbGroups.update({ _id: ObjectId(groupID) }, params, function(success, doc) {
+		if (success) res.send(JSON.stringify(doc));
+		else res.send('error creating event');
+	});
+});
+
+router.post('/deleteEvent', function(req, res, next) {
+	var groupID = req.body.groupID;
+	var eventID = req.body.eventID;
+	var params = { $pull: { events: { id: eventID } } };
+	dbGroups.update({ _id: ObjectId(groupID) }, params, function(success, doc) {
+		if (success) res.send(JSON.stringify(doc));
+		else res.send('error deleting event');
+	});
+});
+
+router.post('/editGroup', function(req, res, next) {
+	var attributesToEdit = req.body.attributesToEdit;
+	var groupID = req.body.groupID;
+	var params = { $set: {} };
+	_.each(attributesToEdit, function(val, key) { if (key != '_id') params.$set[key] = val; });
+	console.log(params);
+
+	dbGroups.update({ _id: ObjectId(groupID) }, params, function(success, result) {
+		if (success) res.send(JSON.stringify(result));
+		else res.send('err updating'); // result = err
+	});
 });
 
 function getMembers(members, callback) {
@@ -61,3 +102,26 @@ function getMembers(members, callback) {
 }
 
 module.exports = router;
+
+	// TODO: fix null vals in post reqs.
+
+	// current system: only adds numbers that have users to group. other numbers are ignored (but group greater is notified of the numbers not added)
+
+	// how to know that group doesn't exist - ignore that for now
+	// TODO, notify users that they have been added to a group
+	// TODO, allow users to leave a group
+
+	// For now, this function is done
+
+	// need to process members: identify who is a user for our app, and who isn't (b/c its only by number, so people can put in number without knowing whether its a user or not)
+	// people who aren't users can have access to photos online?
+	// people who aren't users but become users must have access to group once they are created. How?
+	/*if (name && members && createdBy) {
+		dbPut({
+			name: name,
+			members: 
+		})
+	}*/
+
+	 // object with update vals
+	//var valuesToPut = req.body.valuesToPut; // array of object values

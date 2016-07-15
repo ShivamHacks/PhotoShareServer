@@ -6,6 +6,8 @@ var config = require('../config');
 var jwt = require('jsonwebtoken');
 var jwtSecret = config.jwtSecret;
 
+// TODO: what if valid user, but different token than user in app
+
 router.use('/', function(req, res, next) {
 	// authorize here
 	if (req.url == '/users/login' || req.url == '/users/signup' || req.url == '/users/verify') { next(); } 
