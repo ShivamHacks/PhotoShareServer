@@ -2,11 +2,8 @@ var express = require('express');
 var router = express.Router();
 var config = require('../config');
 
-var Datastore = require('nedb');
-var db = new Datastore('./users.db');
-db.loadDatabase();
-//db.ensureIndex({ fieldName: 'phoneNumber', unique: true }, function (err) {});
-db.remove({}, { multi: true }, function (err, numRemoved) {}); // need to remove after development
+var db = require('../helpers/dbInterface')('users');
+var ObjectId = require('mongodb').ObjectID;
 
 var twilio = require('twilio')(config.twilio.accountSid, config.twilio.authToken);
 var verficationGen = require('randomstring');
@@ -35,21 +32,27 @@ Can also login using phone number and password.
 
 */
 
+/*
+
+TODO: add password reset using same system as verification. Use phone number, get text verification number, and input new password in twice
+(like all services do) and input verification number. If verification number matches, password updated :)
+
+*/
+
 // TODO: logout: Set verified to false
 
 router.post('/login', function(req, res, next) {
 	var phoneNumber = req.body.phoneNumber;
 	var password = req.body.password;
 	if (phoneNumber && password) {
-		dbGet({ 
+		db.get({ 
 			phoneNumber: encrypt(phoneNumber)
 		}, function(err, doc) {
 			if (doc) {
 				if (doc.password == encrypt(password)) {
 					// user has correct credentials: phone number and password
-					delete doc.verified;
 					doc.verficationCode = verficationGen.generate({ length: 6, charset: 'numeric' });
-					dbUpdate([{ phoneNumber: encrypt(phoneNumber) }, doc], function (err, numReplaced) {
+					db.update({ phoneNumber: encrypt(phoneNumber) }, doc, function (err, numReplaced) {
 						if (err) { res.send('Error something'); }
 						else {
 							sendText(phoneNumber, doc.verficationCode, function(sent) {
@@ -68,20 +71,19 @@ router.post('/login', function(req, res, next) {
 router.post('/signup', function(req, res, next) {
 	var phoneNumber = req.body.phoneNumber;
 	var password = req.body.password;
-	console.log(phoneNumber + password);
 	if (typeof phoneNumber != 'undefined' && typeof password != 'undefined') {
-		dbPut({
+		db.put({
 			phoneNumber: encrypt(phoneNumber),
 			password: encrypt(password),
 			verficationCode: verficationGen.generate({ length: 6, charset: 'numeric' })
-		}, function(err, doc) {
-			if (err) { res.send('Unknown error'); }
-			else {
+		}, function(success, doc) {
+			if (success) {
 				sendText(phoneNumber, doc.verficationCode, function(sent) {
 					if (sent) res.send(JSON.stringify(doc));
 					else res.send('Error sending message');
 				});
-			}
+				res.send(JSON.stringify(doc))
+			} else { res.send('Unknown error'); }
 		});
 	} else { res.send('No phone number and/or password provided'); }
 });
@@ -92,23 +94,19 @@ router.post('/verify', function(req, res, next) {
 	var phoneNumber = req.body.phoneNumber;
 	var userID = req.body.userID;
 	if (verficationCode && userID) {
-		dbGet({ _id: userID }, function (err, doc) {
-			if (err) res.send('Unknown error');
-			else if (doc) {
-				// make user verified on database
+		db.get({ _id: ObjectId(userID) }, function (success, doc) {
+			if (success && doc) {
 				if (verficationCode == doc.verficationCode) {
-					doc.verified = true;
 					delete doc.verficationCode;
-					dbUpdate([{ _id: userID }, doc], function (err, numReplaced) {
-						if (err) res.send('Error verifying, but code is correct' + err);
-						else {
-							db.remove({ phoneNumber: encrypt(phoneNumber), $not: { _id: userID } }, {}, function (err, numRemoved) {});
-							// ^ need to make it more general (for mongodb, not nedb)
+					db.update({ _id: ObjectId(userID) }, doc, function (success, doc) {
+						if (success) {
+							db.remove({ phoneNumber: encrypt(phoneNumber), _id: { $ne: ObjectId(userID) } }, function(success) {});
 							res.send(JSON.stringify({ token: jwt.sign({ userID: doc._id }, jwtSecret) }));
-						}
+						} else { res.send('error updating'); }
 					});
 				} else { res.send('incorrect code'); }
-			} else { res.send('Account does not exist'); }
+			} else if (!success) { res.send('Unknown error'); }
+			else { res.send('Account does not exist'); }
 		});
 	} else { res.send('Missing userID and/or verficationCode'); }
 });
@@ -133,32 +131,6 @@ function sendText(phoneNumber, verficationCode, callback) {
 	}, function (err, message) {
 		if (err) { console.log(err); callback(false); }
 		else { callback(true); }
-	});
-}
-
-// db functions to keep code indendent of db provider
-function dbPut(obj, callback) {
-	db.insert(obj, function(err, doc) {
-		if (err) callback(err, null);
-		else callback(null, doc);
-	});
-}
-function dbGet(obj, callback) {
-	db.findOne(obj, function(err, doc) {	
-		if (err) callback(err, null);
-		else callback(null, doc);
-	});
-}
-function dbQuery(obj, callback) {
-	db.find(obj, function(err, docs) {
-		if (err) callback(err, null);
-		else callback(null, docs);
-	});
-}
-function dbUpdate(arr, callback) {
-	db.update(arr[0], arr[1], {}, function(err, numReplaced) {
-		if (err) callback(err, false);
-		else callback(null, true);
 	});
 }
 

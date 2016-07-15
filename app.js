@@ -18,6 +18,27 @@ app.use('/api', require('./routes/authorize'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/photos', require('./routes/photos'));
 
+//var db = require('./helpers/dbInterface')('users');
+//var ObjectId = require('mongodb').ObjectID;
+/*db.put('users', {
+  userID: "sadlkjasdaslk"
+}, function(success, obj) {
+  console.log(obj);
+});*/
+
+/*db.get({
+  _id: ObjectId("57886297e46d0023751bc711")
+}, function(lol, obj) {
+  if (lol) console.log(obj);
+});*/
+
+/*db.update('users', 
+  { userID: "sadlkjasdaslk" }, 
+  { $set: { userID: 'LOLAads', test: 'lol'} }, 
+  function(success, obj) {
+  console.log(success);
+  console.log(obj);
+});*/
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

@@ -8,17 +8,16 @@ var jwtSecret = config.jwtSecret;
 
 router.use('/', function(req, res, next) {
 	// authorize here
-	if (req.url.indexOf('/users/verify/') != -1) { next(); } // EDIT THIS
+	if (req.url == '/users/login' || req.url == '/users/signup' || req.url == '/users/verify') { next(); } 
 	else {
 		// body -> POST, headers -> GET, params & query -> Misc.
 		var token = req.body.token || req.query.token || req.params.token || req.headers.token;
 		if (token) {
 			try {
 				var decoded = jwt.verify(token, jwtSecret);
-				var userID = decoded.userID; // check if user is verified.
-				//var userID = decoded.userID;
-				//var accessToken = decoded.accessToken; // need to generate new access token after used once
-				req.userID = userID;
+				// if decoded, that means that user is authorized
+				var userID = decoded.userID;
+				req.body.userID = userID;
 				next();
 			} catch(err) {
 				res.send(JSON.stringify({
