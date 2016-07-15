@@ -82,7 +82,6 @@ router.post('/signup', function(req, res, next) {
 					if (sent) res.send(JSON.stringify(doc));
 					else res.send('Error sending message');
 				});
-				res.send(JSON.stringify(doc))
 			} else { res.send('Unknown error'); }
 		});
 	} else { res.send('No phone number and/or password provided'); }
@@ -100,6 +99,8 @@ router.post('/verify', function(req, res, next) {
 					delete doc.verficationCode;
 					db.update({ _id: ObjectId(userID) }, doc, function (success, doc) {
 						if (success) {
+							// removes all user accounts with this phone number except for the one that was just verified
+							// in the future, instead of being removed, they will be archived with email identification so people can recover their account
 							db.remove({ phoneNumber: encrypt(phoneNumber), _id: { $ne: ObjectId(userID) } }, function(success) {});
 							res.send(JSON.stringify({ token: jwt.sign({ userID: doc._id }, jwtSecret) }));
 						} else { res.send('error updating'); }

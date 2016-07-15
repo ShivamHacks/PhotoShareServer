@@ -16,6 +16,7 @@ app.use(bodyParser.urlencoded({ limit: '5mb', extended: true }));
 //app.set('jwtSecret', 'LOLOL'); // app.get('jwtSecret')
 app.use('/api', require('./routes/authorize'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/groups', require('./routes/groups'));
 app.use('/api/photos', require('./routes/photos'));
 
 //var db = require('./helpers/dbInterface')('users');

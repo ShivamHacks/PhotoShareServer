@@ -1,10 +1,18 @@
 var MongoClient = require('mongodb').MongoClient;
 var url = 'mongodb://localhost:27017/test';
 
-MongoClient.connect(url, function(err, db) {
+/*MongoClient.connect(url, function(err, db) {
 	db.collection('users').remove({});
 	db.close();
-});
+});*/
+
+// USE THIS
+function wrapper(execute) {
+	MongoClient.connect(url, function(err, db) {
+		if (err) return false;
+		else execute(db);
+	});
+}
 
 module.exports = function(collection) {
 	var exports = {};
@@ -53,17 +61,27 @@ module.exports = function(collection) {
 		});
 	}
 
-	exports.all = function() {
+	exports.getMany = function(params, callback) {
+		MongoClient.connect(url, function(err, db) {
+			db.collection(collection).find(params).toArray(function(err, docs) {
+				if (err) callback(false, err);
+				else callback(true, docs);
+    			db.close();
+			});
+		});
+	}
+
+	/*exports.all = function() {
 		MongoClient.connect(url, function(err, db) {
 			var cursor = db.collection('users').find( );
-			var i = -1;
+			var i = 0;
    			cursor.each(function(err, doc) {
    				console.log(i++);
      			console.log(doc);
    			});
    			db.close();
 		});
-	}
+	}*/
 
 	return exports;
 }
