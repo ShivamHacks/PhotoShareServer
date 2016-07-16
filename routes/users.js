@@ -2,15 +2,16 @@ var express = require('express');
 var router = express.Router();
 var config = require('../config');
 
+var countries = require('country-data').countries;
+
 var db = require('../helpers/dbInterface')('users');
 var ObjectId = require('mongodb').ObjectID;
 
 var twilio = require('twilio')(config.twilio.accountSid, config.twilio.authToken);
 var verficationGen = require('randomstring');
-var crypto = require('crypto');
+var encryption = require('../helpers/encryption');
 var jwt = require('jsonwebtoken');
 
-var cryptoKey = config.cryptoKey;
 var jwtSecret = config.jwtSecret;
 var nativeNumber = config.nativeNumber;
 
@@ -44,15 +45,16 @@ TODO: add password reset using same system as verification. Use phone number, ge
 router.post('/login', function(req, res, next) {
 	var phoneNumber = req.body.phoneNumber;
 	var password = req.body.password;
+	var countryISO = req.body.countryISO;
 	if (phoneNumber && password) {
 		db.get({ 
-			phoneNumber: encrypt(phoneNumber)
+			phoneNumber: encryption.encrypt(phoneNumber)
 		}, function(err, doc) {
 			if (doc) {
-				if (doc.password == encrypt(password)) {
+				if (doc.password == encryption.encrypt(password)) {
 					// user has correct credentials: phone number and password
 					doc.verficationCode = verficationGen.generate({ length: 6, charset: 'numeric' });
-					db.update({ phoneNumber: encrypt(phoneNumber) }, doc, function (err, numReplaced) {
+					db.update({ phoneNumber: encryption.encrypt(phoneNumber) }, doc, function (err, numReplaced) {
 						if (err) { res.send('Error something'); }
 						else {
 							sendText(phoneNumber, doc.verficationCode, function(sent) {
@@ -69,20 +71,23 @@ router.post('/login', function(req, res, next) {
 });
 
 router.post('/signup', function(req, res, next) {
+
 	var phoneNumber = req.body.phoneNumber;
+	var countryISO = req.body.countryISO;
 	var password = req.body.password;
+
+	var internationalPhoneNumber = countries[countryISO.toUpperCase()].countryCallingCodes[0] + phoneNumber;
 	if (typeof phoneNumber != 'undefined' && typeof password != 'undefined') {
 		db.put({
-			phoneNumber: encrypt(phoneNumber),
-			password: encrypt(password),
+			phoneNumber: encryption.encrypt(internationalPhoneNumber),
+			password: encryption.encrypt(password),
 			verficationCode: verficationGen.generate({ length: 6, charset: 'numeric' })
 		}, function(success, doc) {
 			if (success) {
-				/*sendText(phoneNumber, doc.verficationCode, function(sent) {
+				sendText(internationalPhoneNumber, doc.verficationCode, function(sent) {
 					if (sent) res.send(JSON.stringify(doc));
 					else res.send('Error sending message');
-				});*/
-				res.send(JSON.stringify(doc));
+				});
 			} else { res.send('Unknown error'); }
 		});
 	} else { res.send('No phone number and/or password provided'); }
@@ -90,9 +95,10 @@ router.post('/signup', function(req, res, next) {
 
 router.post('/verify', function(req, res, next) {
 	// replace existing account if it exists
-	var verficationCode = req.body.verficationCode;
-	var phoneNumber = req.body.phoneNumber;
 	var userID = req.body.userID;
+	var verficationCode = req.body.verficationCode;
+	var phoneNumber = countries[req.body.countryISO.toUpperCase()].countryCallingCodes[0].concat(req.body.phoneNumber);
+	console.log(phoneNumber);
 	if (verficationCode && userID) {
 		db.get({ _id: ObjectId(userID) }, function (success, doc) {
 			if (success && doc) {
@@ -102,7 +108,7 @@ router.post('/verify', function(req, res, next) {
 						if (success) {
 							// removes all user accounts with this phone number except for the one that was just verified
 							// in the future, instead of being removed, they will be archived with email identification so people can recover their account
-							db.remove({ phoneNumber: encrypt(phoneNumber), _id: { $ne: ObjectId(userID) } }, function(success) {});
+							db.remove({ phoneNumber: encryption.encrypt(phoneNumber), _id: { $ne: ObjectId(userID) } }, function(success) {});
 							res.send(JSON.stringify({ token: jwt.sign({ userID: doc._id }, jwtSecret) }));
 						} else { res.send('error updating'); }
 					});
@@ -113,18 +119,6 @@ router.post('/verify', function(req, res, next) {
 	} else { res.send('Missing userID and/or verficationCode'); }
 });
 
-function encrypt(phoneNumber) {
-	var cipher = crypto.createCipher('aes-256-cbc', cryptoKey);
-	cipher.update(phoneNumber, 'utf8', 'base64');
-	var encrypted = cipher.final('base64');
-	return encrypted;
-}
-function decrypt(phoneNumber) {
-	var decipher = crypto.createDecipher('aes-256-cbc', cryptoKey);
-	decipher.update(phoneNumber, 'base64', 'utf8');
-	var decrypted = decipher.final('utf8');
-	return decrypted;
-}
 function sendText(phoneNumber, verficationCode, callback) {
 	twilio.messages.create({
 		to: phoneNumber,

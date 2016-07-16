@@ -13,6 +13,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ limit: '5mb', extended: true }));
 
 
+// TODO: handle url that is not defined
+
 //app.set('jwtSecret', 'LOLOL'); // app.get('jwtSecret')
 app.use('/api', require('./routes/authorize'));
 app.use('/api/users', require('./routes/users'));

@@ -11,29 +11,25 @@ var request = require('request');
 
 var shortid = require('shortid');
 
-// to pipe image: request(doc.url).pipe(res);
+// TODO: switch from cloudinary to s3 b/c images are larger
+// and s3 might be cheaper in the long term. Still need to do calculations
+// but cloudinary does automatic facial recognition. Can it replace clarifai or kairos?
+// if yes, then I might stick to cloudinary
+// no it can't really replace clarifai/kairos for my needs
 
 router.post('/upload', function(req, res, next) {
-	// FIX THIS
-	var buff = new Buffer(req.body.image, 'base64');
-	var path = './uploads/' + shortid.generate();
-	fs.writeFile(path, buff, function(err) { 
-		if (err) { res.send('Error uploading photo' + err); }
+	var base = 'data:image/png;base64,';
+	cloudinary.v2.uploader.upload(base + req.body.image, function(err, result) {
+		if (err) { res.send('Error uploading photo'); }
 		else {
-			cloudinary.v2.uploader.upload(path, function(err, result) {
-				if (err) { res.send('Error uploading photo'); }
-				else {
-					fs.unlink(path,function(err) {});  
-					dbPhotos.put({
-						capturedBy: req.body.userID,
-						eventID: req.body.eventID,
-						url: result.secure_url,
-						capturedAt: Date.now()
-					}, function(success, doc) {
-						if (success) res.send(JSON.stringify(doc)); //res.send('Succesfully uploaded image');
-						else res.send('Error putting image on DB');
-					});
-				}
+			dbPhotos.put({
+				capturedBy: req.body.userID,
+				eventID: req.body.eventID,
+				url: result.secure_url,
+				capturedAt: Date.now()
+			}, function(success, doc) {
+				if (success) res.send(JSON.stringify(doc));
+				else res.send('Error putting image on DB');
 			});
 		}
 	});
@@ -50,6 +46,11 @@ router.get('/get', function(req, res, next) {
 			request(url).pipe(res);
 		} else { res.send('Error retrieving image'); }
 	});
+});
+
+router.get('/getAll', function(req, res, next) {
+	var userID = req.body.userID;
+	var eventID = req.body.eventID;
 });
 
 module.exports = router;

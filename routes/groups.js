@@ -11,6 +11,12 @@ var encryption = require('../helpers/encryption');
 
 // only creator can delete group
 
+
+// any time new group is added, the groupID and the date member was added is pushed the user array of groups
+// then whenever user launches app, the app loads all the groups for the user. The thing to figure out is,
+// when the user views a group/edits a group how should it appear on the top of the groups list. Would that be too much server syncing?
+// for now, we will sync EVERY TIME anything is changed, just to get development faster.
+
 router.post('/newGroup', function(req, res, next) {
 	var members = req.body.members;  // list of phone numbers
 
@@ -27,7 +33,7 @@ router.post('/newGroup', function(req, res, next) {
 				if (success) res.send(JSON.stringify(doc));
 				else res.send('error adding group');
 			});
-		}
+		} else { res.send('error adding group') };
 	});
 
 	// TODO: push groupID to user's groups array
@@ -64,25 +70,31 @@ router.post('/createEvent', function(req, res, next) {
 	});
 });
 
+// only event creator can delete event
+// TODO: if no users left in event, delete all event photos
 router.post('/deleteEvent', function(req, res, next) {
 	var groupID = req.body.groupID;
 	var eventID = req.body.eventID;
+	var userID = req.body.userID;
 	dbGroups.get({ _id: ObjectId(groupID) }, function(success, group) {
 		if (success) {
 			if (_.isEmpty(group)) { res.send('No group with this id'); }
 			else {
-				if (req.body.userID == group.createdBy) {
+				var ev = _.find(group.events, function(event) { return event.createdBy == userID; });
+				if (typeof ev == undefined) { res.send('You are not authorized to delete event'); }
+				else {
 					var params = { $pull: { events: { id: eventID } } };
 					dbGroups.update({ _id: ObjectId(groupID) }, params, function(success, doc) {
 						if (success) res.send(JSON.stringify(doc));
 						else res.send('error deleting event');
 					});
-				} else { res.send('You are not authorized to delete event'); }
+				}
 			}
 		} else { res.send('Unknown error'); }
 	});
 });
 
+// only group creator can delete group
 router.post('/deleteGroup', function(req, res, next) {
 	var groupID = req.body.groupID;
 	dbGroups.get({ _id: ObjectId(groupID) }, function(success, group) {
@@ -91,7 +103,7 @@ router.post('/deleteGroup', function(req, res, next) {
 			else {
 				if (req.body.userID == group.createdBy) {
 					db.remove({ _id: ObjectId(groupID) }, function(success) {});
-				} else { res.send('You are not authorized to delete event'); }
+				} else { res.send('You are not authorized to delete group'); }
 			}
 		} else { res.send('Unknown error'); }
 	});
