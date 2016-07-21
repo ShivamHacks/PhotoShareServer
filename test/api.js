@@ -14,13 +14,13 @@
 */
 
 // BEFORE DOING ANYTHING ELSE IN APP, finish this so that actual app testing can begin
+// MAKE SURE that in post functions, use req.body and in get functions, use req.headers
 
 // Dependencies
 var express = require('express');
 var router = express.Router();
 var config = require('../config');
 var encryption = require('../helpers/encryption');
-var verficationGen = require('randomstring');
 var ObjectID = require('mongodb').ObjectID;
 var jwt = require('jsonwebtoken');
 var jwtSecret = config.jwtSecret;
@@ -53,59 +53,78 @@ router.post('/photos/delete', function(req, res, next) {});
 function login(req, res, next) {
 	// parameters: phoneNumber, countryISO, and password
 	// return userID and encrypted phone number
-	var phoneNumber = req.body.phoneNumber;
-	res.send(JSON.stringify({
+	var r = new Request(req, res);
+	r.send(JSON.stringify({
 		userID: new ObjectID(),
-		phoneNumber: encryption.encrypt(phoneNumber)
+		phoneNumber: encryption.encrypt(r.body.phoneNumber)
 	}));
 }
 function signup(req, res, next) {
 	// parameters: phoneNumber, countryISO, and password
 	// return userID and encrypted phone number
+	var r = new Request(req, res);
 }
 function verify(req, res, next) {
 	// parameters: phoneNumber, verificationCode, and userID
 	// return access token
+	var r = new Request(req, res);
 }
 function deleteAccount(req, res, next) {
 	// parameters: userID
 	// return success or not
-	var userID = getUID(req.body.token);
+	var r = new Request(req, res);
+	//var userID = getUID(req.body.token);
 }
 function createGroup(req, res, next) {
 	// parameters: userID, groupName, groupMembers
 	// return groupID
+	var r = new Request(req, res);
 }
 function createEvent(req, res, next) {
 	// parameters: groupID, eventName
 	// return event info (name, id)
+	var r = new Request(req, res);
 }
 function getGroupInfo(req, res, next) {
 	// parameters: groupID
 	// return group info (members, name, createdAt, createdBy, etc)
+	var r = new Request(req, res);
 }
 function getGroups(req, res, next) {
 	// parameters: userID
 	// return list of groupsID's and groupNames
+	var r = new Request(req, res);
 }
 function getEvents(req, res, next) {
 	// parameters: groupID
 	// return list of eventID's and eventNames
+	var r = new Request(req, res);
 }
 function editMembers(req, res, next) {
 	// parameters: membersToAdd, membersToRemove, groupID
 	// return success or not and new group info
+	var r = new Request(req, res);
 }
 function leaveGroup(req, res, next) {
 	// parameters: userID and groupID
 	// return success or not
+	var r = new Request(req, res);
 }
 
 // Helper Functions
+function Request(req, res) {
+	this.body = returnBody(req);
+	this.send = function(result) { res.send(result); }
+}
 function getUID(token) {
 	// no try/catch around decoding because assuming token is correct
 	var decoded = jwt.verify(token, jwtSecret);
 	return decoded.userID;
+}
+function returnBody(req) {
+	if (req.method == 'POST') return req.body;
+	else if (req.method == 'GET') return req.headers;
+	else return req; // no change
 }
 
 module.exports = router;
