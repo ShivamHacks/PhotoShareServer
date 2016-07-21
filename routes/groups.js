@@ -30,8 +30,11 @@ router.post('/newGroup', function(req, res, next) {
 				events: [] 
 			};
 			dbGroups.put(group, function(success, doc) {
-				if (success) res.send(JSON.stringify(doc));
-				else res.send('error adding group');
+				if (success) {
+					updateMemberGroups(results.existingUsers, doc._id);
+					res.send(JSON.stringify(doc));
+				}
+				else { res.send('error adding group'); }
 			});
 		} else { res.send('error adding group') };
 	});
@@ -39,6 +42,14 @@ router.post('/newGroup', function(req, res, next) {
 	// TODO: push groupID to user's groups array
 
 });
+
+function updateMemberGroups(members, groupID) {
+	var params = { $push: { groups: groupID } };
+	for (var i = 0; i < members.length; i++) {
+		dbGroups.update({ _id: ObjectId(members[i]) }, params, function(success, doc) {});
+		// TODO: error handling for this
+	}
+}
 
 router.post('/addMembers', function(req, res, next) {
 	var groupID = req.body.groupID;

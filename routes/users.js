@@ -81,7 +81,8 @@ router.post('/signup', function(req, res, next) {
 		db.put({
 			phoneNumber: encryption.encrypt(internationalPhoneNumber),
 			password: encryption.encrypt(password),
-			verficationCode: verficationGen.generate({ length: 6, charset: 'numeric' })
+			verficationCode: verficationGen.generate({ length: 6, charset: 'numeric' }),
+			groups: []
 		}, function(success, doc) {
 			if (success) {
 				sendText(internationalPhoneNumber, doc.verficationCode, function(sent) {
