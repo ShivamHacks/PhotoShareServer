@@ -1,19 +1,6 @@
 var MongoClient = require('mongodb').MongoClient;
 var url = 'mongodb://localhost:27017/test';
 
-/*MongoClient.connect(url, function(err, db) {
-	db.collection('users').remove({});
-	db.close();
-});*/
-
-// USE THIS
-function wrapper(execute) {
-	MongoClient.connect(url, function(err, db) {
-		if (err) return false;
-		else execute(db);
-	});
-}
-
 module.exports = function(collection) {
 	var exports = {};
 

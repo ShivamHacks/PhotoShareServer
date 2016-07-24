@@ -10,10 +10,7 @@ var jwtSecret = config.jwtSecret;
 
 router.use('/', function(req, res, next) {
 	// authorize here 
-	if (req.url == '/users/login' 
-		|| req.url == '/users/signup' 
-		|| req.url == '/users/verify'
-		|| req.url.indexOf('/photos/get') != -1) { next(); } 
+	if (req.url == '/users/login' || req.url == '/users/signup' || req.url == '/users/verify') { next(); } 
 	else {
 		// body -> POST, headers -> GET, params & query -> Misc.
 		var token = req.body.token || req.query.token || req.params.token || req.headers.token;

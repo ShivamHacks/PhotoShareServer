@@ -16,6 +16,7 @@ var shortid = require('shortid');
 
 var _ = require('underscore');
 var encryption = require('../helpers/encryption');
+var e = require('../helpers/error');
 
 // Helper Functions
 function Request(req, res) {
@@ -38,7 +39,7 @@ function Error(status, message) {
 			message: this.message
 		});
 	}
-} 
+}
 
 // Router Functions
 
@@ -85,7 +86,7 @@ function getGroupInfo(req, res, next) {
 	var r = new Request(req, res);
 	dbGroups.get({ _id: ObjectId(r.body.groupid) }, function(success, doc) {
 		if (success) {
-			if (_.isEmpty(doc)) { r.send(new Error(404, 'Group Not Found').toString()); }
+			if (_.isEmpty(doc)) { r.send(e.new(404, 'Group Not Found')); }
 				else {
 					var members = decryptMembers(_.pluck(doc.members, 'phoneNumber'));
 					r.send(JSON.stringify({
@@ -133,7 +134,8 @@ function leaveGroup(req, res, next) {
 	dbUsers.update({ _id: ObjectId(r.body.userID) }, userParams, function(success, doc) {});
 	dbGroups.update({ _id: ObjectId(r.body.groupID) }, groupParams, function(success, doc) {
 		if (success) {
-			if (doc.members.length == 0) deleteGroup(groupID);
+			if (_.isEmpty(doc)) { ; }
+			else if (doc.members.length == 0) deleteGroup(groupID);
 		}
 	});
 	r.send("YAY");
