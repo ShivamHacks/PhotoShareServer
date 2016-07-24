@@ -57,10 +57,10 @@ router.post('/login', function(req, res, next) {
 					db.update({ phoneNumber: encryption.encrypt(phoneNumber) }, doc, function (err, numReplaced) {
 						if (err) { res.send('Error something'); }
 						else {
-							sendText(phoneNumber, doc.verficationCode, function(sent) {
+							/*sendText(phoneNumber, doc.verficationCode, function(sent) {
 								if (sent) res.send(JSON.stringify(doc));
 								else res.send('Error sending message');
-							});
+							});*/
 						}
 					});
 				} else { res.send('Incorrect password'); }
@@ -76,7 +76,7 @@ router.post('/signup', function(req, res, next) {
 	var countryISO = req.body.countryISO;
 	var password = req.body.password;
 
-	var internationalPhoneNumber = countries[countryISO.toUpperCase()].countryCallingCodes[0] + phoneNumber;
+	var internationalPhoneNumber = phoneNumber;//countries[countryISO.toUpperCase()].countryCallingCodes[0] + phoneNumber;
 	if (typeof phoneNumber != 'undefined' && typeof password != 'undefined') {
 		db.put({
 			phoneNumber: encryption.encrypt(internationalPhoneNumber),
@@ -85,10 +85,11 @@ router.post('/signup', function(req, res, next) {
 			groups: []
 		}, function(success, doc) {
 			if (success) {
-				sendText(internationalPhoneNumber, doc.verficationCode, function(sent) {
+				/*sendText(internationalPhoneNumber, doc.verficationCode, function(sent) {
 					if (sent) res.send(JSON.stringify(doc));
 					else res.send('Error sending message');
-				});
+				});*/
+				res.send(JSON.stringify(doc));
 			} else { res.send('Unknown error'); }
 		});
 	} else { res.send('No phone number and/or password provided'); }
@@ -98,8 +99,7 @@ router.post('/verify', function(req, res, next) {
 	// replace existing account if it exists
 	var userID = req.body.userID;
 	var verficationCode = req.body.verficationCode;
-	var phoneNumber = countries[req.body.countryISO.toUpperCase()].countryCallingCodes[0].concat(req.body.phoneNumber);
-	console.log(phoneNumber);
+	var phoneNumber = req.body.phoneNumber; //countries[req.body.countryISO.toUpperCase()].countryCallingCodes[0].concat(req.body.phoneNumber);
 	if (verficationCode && userID) {
 		db.get({ _id: ObjectId(userID) }, function (success, doc) {
 			if (success && doc) {
@@ -110,7 +110,7 @@ router.post('/verify', function(req, res, next) {
 							// removes all user accounts with this phone number except for the one that was just verified
 							// in the future, instead of being removed, they will be archived with email identification so people can recover their account
 							db.remove({ phoneNumber: encryption.encrypt(phoneNumber), _id: { $ne: ObjectId(userID) } }, function(success) {});
-							res.send(JSON.stringify({ token: jwt.sign({ userID: doc._id }, jwtSecret) }));
+							res.send(JSON.stringify({ token: jwt.sign({ userID: doc._id, phoneNumber: doc.phoneNumber }, jwtSecret) }));
 						} else { res.send('error updating'); }
 					});
 				} else { res.send('incorrect code'); }

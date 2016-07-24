@@ -1,6 +1,14 @@
 var express = require('express');
 var router = express.Router();
 
+// Router Index
+router.post('/createGroup', createGroup);
+router.get('/getAllGroups', getAllGroups);
+router.get('/getGroupInfo', getGroupInfo);
+router.post('/editGroup', editGroup);
+router.post('/leaveGroup', leaveGroup);
+
+// Dependencies
 var dbUsers = require('../helpers/dbInterface')('users');
 var dbGroups = require('../helpers/dbInterface')('groups');
 var ObjectId = require('mongodb').ObjectID;
@@ -9,6 +17,169 @@ var shortid = require('shortid');
 var _ = require('underscore');
 var encryption = require('../helpers/encryption');
 
+// Helper Functions
+function Request(req, res) {
+	this.body = returnBody(req);
+	this.send = function(result) { res.send(result); }
+}
+function returnBody(req) {
+	// REMEMBER -> in get requests, all body field keys are lowercase
+	if (req.method == 'POST') return req.body;
+	else if (req.method == 'GET') return req.headers;
+	else return req; // no change
+}
+function Error(status, message) {
+	this.status = status;
+	this.message = message;
+	this.toString = function() {
+		return JSON.stringify({
+			success: false,
+			status: this.status,
+			message: this.message
+		});
+	}
+} 
+
+// Router Functions
+
+function createGroup(req, res, next) {
+	var r = new Request(req, res);
+	var members = r.body.members;
+	var userID = r.body.userID;
+	var phoneNumber = r.body.phoneNumber;
+	// TODO: get phone number from userID, either by putting it in token, or something else
+	getMembers(members, function(success, results) {
+		if (success) {
+			results.push({ userID: userID, phoneNumber: phoneNumber });
+			var group = { 
+				name: r.body.groupName, 
+				members: results, 
+				createdBy: r.body.userID, 
+				createdAt: Date.now()
+			};
+			dbGroups.put(group, function(success, doc) {
+				if (success) {
+					updateMemberGroups(doc.members, doc._id);
+					r.send(JSON.stringify({
+						groupID: doc._id,
+						groupName: doc.name
+					}));
+				}
+				else { r.send(new Error(500, 'Error Creating Group').toString()); }
+			});
+		} else { r.send(new Error(500, 'Error Creating Group').toString()); }
+	});
+}
+
+function getAllGroups(req, res, next) {
+	var r = new Request(req, res);
+	dbUsers.get({ _id: ObjectId(req.body.userID) }, function(success, doc) {
+		if (success) {
+			if (_.isEmpty(doc)) r.send(new Error(500, 'User does not exist').toString());
+			else r.send(JSON.stringify({ groups: doc.groups }));
+		} else { r.send(new Error(500, 'Error Getting Groups').toString()); }
+	});
+}
+
+function getGroupInfo(req, res, next) {
+	var r = new Request(req, res);
+	dbGroups.get({ _id: ObjectId(r.body.groupid) }, function(success, doc) {
+		if (success) {
+			if (_.isEmpty(doc)) { r.send(new Error(404, 'Group Not Found').toString()); }
+				else {
+					var members = decryptMembers(_.pluck(doc.members, 'phoneNumber'));
+					r.send(JSON.stringify({
+						groupID: doc._id,
+						groupName: doc.name,
+						createdBy: doc.createdBy,
+						createdAt: doc.createdAt,
+						members: members
+					}));
+				}
+		} // TODO: error handling
+	});
+}
+
+function editGroup(req, res, next) {
+	var r = new Request(req, res);
+	var params = {};
+	if (r.body.newName != null) params.$set = { name: r.body.newName };
+	if (r.body.newMembers != null) {
+		getMembers(r.body.newMembers, function(success, results) {
+			if (success) {
+				params.$push = { members: { $each: results } };
+				dbGroups.update({ _id: ObjectId(r.body.groupID) }, params, function(success, doc) {
+					res.send(doc);
+				});
+			}
+		});
+	} else { 
+		if (_.isEmpty(params)) { ; } // nothing to update
+		else { // only update name
+			dbGroups.update({ _id: ObjectId(r.body.groupID) }, params, function(success, doc) {
+				res.send(doc);
+			});
+		}
+	}
+	// TODO: error handling
+}
+
+function leaveGroup(req, res, next) {
+	var r = new Request(req, res);
+	var userID = r.body.userID;
+	var groupID = r.body.groupID;
+	var userParams = { $pull: { groups: ObjectId(groupID) } };
+	var groupParams = { $pull: { members: { userID: userID } } };
+	dbUsers.update({ _id: ObjectId(r.body.userID) }, userParams, function(success, doc) {});
+	dbGroups.update({ _id: ObjectId(r.body.groupID) }, groupParams, function(success, doc) {
+		if (success) {
+			if (doc.members.length == 0) deleteGroup(groupID);
+		}
+	});
+	r.send("YAY");
+}
+
+
+// Router Helper Functions
+function updateMemberGroups(members, groupID) {
+	var params = { $push: { groups: groupID } };
+	for (var i = 0; i < members.length; i++) {
+		dbUsers.update({ _id: ObjectId(members[i].userID) }, params, function(success, doc) {});
+		// TODO: error handling for this
+	}
+}
+function getMembers(members, callback) {
+	// For now, ignoring phoneNumbers w/ no associated user
+	var encryptedNumbers = _.map(members, function(member) { 
+		return encryption.encrypt(member); 
+	});
+	dbUsers.getMany({ phoneNumber: { $in: encryptedNumbers} }, function(success, results) {
+		if (success) {
+			var dbNumbers = _.pluck(results, 'phoneNumber');
+			var categorize = _.groupBy(encryptedNumbers, function(number) { return _.contains(dbNumbers, number);  });
+			var existingUsers = _.map(_.filter(results, function(obj) { 
+				return _.contains(categorize.true, obj.phoneNumber); 
+			}), function(mem) {
+				return { userID: mem._id, phoneNumber: mem.phoneNumber };
+			});
+			callback(true, existingUsers);
+		} else callback(false, null);
+	});
+}
+function deleteGroup(groupID) {
+	dbGroups.get({ _id: ObjectId(groupID) }, function(success, group) {
+		if (success) {
+			if (!(_.isEmpty(group))) 
+				dbGroups.remove({ _id: ObjectId(groupID) }, function(success) {});
+		} else { res.send('Unknown error'); }
+	});
+}
+function decryptMembers(members) {
+	for (var i = 0; i < members.length; i++)
+		members[i] = encryption.decrypt(members[i]);
+	return members;
+}
+
 // only creator can delete group
 
 
@@ -16,137 +187,6 @@ var encryption = require('../helpers/encryption');
 // then whenever user launches app, the app loads all the groups for the user. The thing to figure out is,
 // when the user views a group/edits a group how should it appear on the top of the groups list. Would that be too much server syncing?
 // for now, we will sync EVERY TIME anything is changed, just to get development faster.
-
-router.post('/newGroup', function(req, res, next) {
-	var members = req.body.members;  // list of phone numbers
-
-	getMembers(members, function(success, results) {
-		if (success) {
-			var group = { 
-				name: req.body.groupName, 
-				members: results.existingUsers, 
-				createdBy: req.body.userID, 
-				createdAt: Date.now(), 
-				events: [] 
-			};
-			dbGroups.put(group, function(success, doc) {
-				if (success) {
-					updateMemberGroups(results.existingUsers, doc._id);
-					res.send(JSON.stringify(doc));
-				}
-				else { res.send('error adding group'); }
-			});
-		} else { res.send('error adding group') };
-	});
-
-	// TODO: push groupID to user's groups array
-
-});
-
-function updateMemberGroups(members, groupID) {
-	var params = { $push: { groups: groupID } };
-	for (var i = 0; i < members.length; i++) {
-		dbGroups.update({ _id: ObjectId(members[i]) }, params, function(success, doc) {});
-		// TODO: error handling for this
-	}
-}
-
-router.post('/addMembers', function(req, res, next) {
-	var groupID = req.body.groupID;
-	var members = req.body.members;
-	getMembers(members, function(success, results) {
-		if (success) {
-			var params = { $push: { members: { $each: results.existingUsers } } };
-			dbGroups.update({ _id: ObjectId(groupID) }, params, function(success, doc) {
-				if (success) res.send(JSON.stringify(doc));
-				else res.send('error updating group members');
-			});
-		}
-	});
-});
-
-router.post('/createEvent', function(req, res, next) {
-	var groupID = req.body.groupID;
-	var params = { $push: { 
-		events: { 
-			name: req.body.eventName, 
-			id: shortid.generate(), 
-			createdAt: Date.now(),
-			createdBy: req.body.userID
-		} 
-	} };
-	dbGroups.update({ _id: ObjectId(groupID) }, params, function(success, doc) {
-		if (success) res.send(JSON.stringify(doc));
-		else res.send('error creating event');
-	});
-});
-
-// only event creator can delete event
-// TODO: if no users left in event, delete all event photos
-router.post('/deleteEvent', function(req, res, next) {
-	var groupID = req.body.groupID;
-	var eventID = req.body.eventID;
-	var userID = req.body.userID;
-	dbGroups.get({ _id: ObjectId(groupID) }, function(success, group) {
-		if (success) {
-			if (_.isEmpty(group)) { res.send('No group with this id'); }
-			else {
-				var ev = _.find(group.events, function(event) { return event.createdBy == userID; });
-				if (typeof ev == undefined) { res.send('You are not authorized to delete event'); }
-				else {
-					var params = { $pull: { events: { id: eventID } } };
-					dbGroups.update({ _id: ObjectId(groupID) }, params, function(success, doc) {
-						if (success) res.send(JSON.stringify(doc));
-						else res.send('error deleting event');
-					});
-				}
-			}
-		} else { res.send('Unknown error'); }
-	});
-});
-
-// only group creator can delete group
-router.post('/deleteGroup', function(req, res, next) {
-	var groupID = req.body.groupID;
-	dbGroups.get({ _id: ObjectId(groupID) }, function(success, group) {
-		if (success) {
-			if (_.isEmpty(group)) { res.send('No group with this id'); }
-			else {
-				if (req.body.userID == group.createdBy) {
-					db.remove({ _id: ObjectId(groupID) }, function(success) {});
-				} else { res.send('You are not authorized to delete group'); }
-			}
-		} else { res.send('Unknown error'); }
-	});
-});
-
-// need to fix this a little
-router.post('/editGroup', function(req, res, next) {
-	var attributesToEdit = req.body.attributesToEdit;
-	var groupID = req.body.groupID;
-	var params = { $set: {} };
-	_.each(attributesToEdit, function(val, key) { if (key != '_id') params.$set[key] = val; });
-	console.log(params);
-
-	dbGroups.update({ _id: ObjectId(groupID) }, params, function(success, result) {
-		if (success) res.send(JSON.stringify(result));
-		else res.send('err updating'); // result = err
-	});
-});
-
-function getMembers(members, callback) {
-	var encryptedNumbers = _.map(members, function(member) { return encryption.encrypt(member); });
-	dbUsers.getMany({ phoneNumber: { $in: encryptedNumbers} }, function(success, results) {
-		if (success) {
-			var dbNumbers = _.pluck(results, 'phoneNumber');
-			var categorize = _.groupBy(encryptedNumbers, function(number) { return _.contains(dbNumbers, number); });
-			var existingUsers = _.pluck(_.filter(results, function(obj) { return _.contains(categorize.true, obj.phoneNumber); }), '_id');
-			var notUsers = _.filter(encryptedNumbers, function(number) { return _.contains(categorize.true, number); });
-			var toReturn = { existingUsers: existingUsers, notUsers: notUsers };
-			callback(true, toReturn);
-		} else callback(false, null);
-	});
-}
 
 module.exports = router;
 

@@ -21,7 +21,10 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/groups', require('./routes/groups'));
 app.use('/api/photos', require('./routes/photos'));*/
 
-app.use('/api', require('./test/api'));
+//app.use('/api', require('./test/api'));
+app.use('/api', require('./routes/authorize'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/groups', require('./routes/groups'));
 
 //var db = require('./helpers/dbInterface')('users');
 //var ObjectId = require('mongodb').ObjectID;
