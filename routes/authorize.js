@@ -9,8 +9,11 @@ var jwtSecret = config.jwtSecret;
 // TODO: what if valid user, but different token than user in app
 
 router.use('/', function(req, res, next) {
-	// authorize here
-	if (req.url == '/users/login' || req.url == '/users/signup' || req.url == '/users/verify') { next(); } 
+	// authorize here 
+	if (req.url == '/users/login' 
+		|| req.url == '/users/signup' 
+		|| req.url == '/users/verify'
+		|| req.url.indexOf('/photos/get') != -1) { next(); } 
 	else {
 		// body -> POST, headers -> GET, params & query -> Misc.
 		var token = req.body.token || req.query.token || req.params.token || req.headers.token;

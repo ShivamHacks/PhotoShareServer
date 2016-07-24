@@ -85,6 +85,7 @@ router.post('/signup', function(req, res, next) {
 			groups: []
 		}, function(success, doc) {
 			if (success) {
+				console.log(doc);
 				/*sendText(internationalPhoneNumber, doc.verficationCode, function(sent) {
 					if (sent) res.send(JSON.stringify(doc));
 					else res.send('Error sending message');
@@ -96,7 +97,7 @@ router.post('/signup', function(req, res, next) {
 });
 
 router.post('/verify', function(req, res, next) {
-	// replace existing account if it exists
+	// replace existing account if it exists - TODO: need to delete other instances of existing user in groups, etc.
 	var userID = req.body.userID;
 	var verficationCode = req.body.verficationCode;
 	var phoneNumber = req.body.phoneNumber; //countries[req.body.countryISO.toUpperCase()].countryCallingCodes[0].concat(req.body.phoneNumber);

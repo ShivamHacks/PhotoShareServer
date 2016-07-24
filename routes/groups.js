@@ -59,7 +59,7 @@ function createGroup(req, res, next) {
 			};
 			dbGroups.put(group, function(success, doc) {
 				if (success) {
-					updateMemberGroups(doc.members, doc._id);
+					updateMemberGroups(doc);
 					r.send(JSON.stringify({
 						groupID: doc._id,
 						groupName: doc.name
@@ -141,10 +141,10 @@ function leaveGroup(req, res, next) {
 
 
 // Router Helper Functions
-function updateMemberGroups(members, groupID) {
-	var params = { $push: { groups: groupID } };
-	for (var i = 0; i < members.length; i++) {
-		dbUsers.update({ _id: ObjectId(members[i].userID) }, params, function(success, doc) {});
+function updateMemberGroups(doc) {
+	var params = { $push: { groups: { groupID: doc._id, groupName: doc.name } } };
+	for (var i = 0; i < doc.members.length; i++) {
+		dbUsers.update({ _id: ObjectId(doc.members[i].userID) }, params, function(success, obj) {});
 		// TODO: error handling for this
 	}
 }
@@ -180,35 +180,9 @@ function decryptMembers(members) {
 	return members;
 }
 
-// only creator can delete group
-
-
 // any time new group is added, the groupID and the date member was added is pushed the user array of groups
 // then whenever user launches app, the app loads all the groups for the user. The thing to figure out is,
 // when the user views a group/edits a group how should it appear on the top of the groups list. Would that be too much server syncing?
 // for now, we will sync EVERY TIME anything is changed, just to get development faster.
 
 module.exports = router;
-
-	// TODO: fix null vals in post reqs.
-
-	// current system: only adds numbers that have users to group. other numbers are ignored (but group greater is notified of the numbers not added)
-
-	// how to know that group doesn't exist - ignore that for now
-	// TODO, notify users that they have been added to a group
-	// TODO, allow users to leave a group
-
-	// For now, this function is done
-
-	// need to process members: identify who is a user for our app, and who isn't (b/c its only by number, so people can put in number without knowing whether its a user or not)
-	// people who aren't users can have access to photos online?
-	// people who aren't users but become users must have access to group once they are created. How?
-	/*if (name && members && createdBy) {
-		dbPut({
-			name: name,
-			members: 
-		})
-	}*/
-
-	 // object with update vals
-	//var valuesToPut = req.body.valuesToPut; // array of object values
