@@ -134,11 +134,13 @@ function leaveGroup(req, res, next) {
 	dbUsers.update({ _id: ObjectId(r.body.userID) }, userParams, function(success, doc) {});
 	dbGroups.update({ _id: ObjectId(r.body.groupID) }, groupParams, function(success, doc) {
 		if (success) {
-			if (_.isEmpty(doc)) { ; }
-			else if (doc.members.length == 0) deleteGroup(groupID);
+			if (_.isEmpty(doc)) { res.send('No group w/ this id'); }
+			else {
+				if (doc.members.length == 0) deleteGroup(groupID);
+				res.send('All good');
+			}
 		}
 	});
-	r.send("YAY");
 }
 
 
