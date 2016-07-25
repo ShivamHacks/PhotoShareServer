@@ -14,14 +14,7 @@ app.use(morgan('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ limit: '5mb', extended: true }));
 
-
 // TODO: handle url that is not defined
-
-//app.set('jwtSecret', 'LOLOL'); // app.get('jwtSecret')
-/*app.use('/api', require('./routes/authorize'));
-app.use('/api/users', require('./routes/users'));
-app.use('/api/groups', require('./routes/groups'));
-app.use('/api/photos', require('./routes/photos'));*/
 
 //app.use('/api', require('./test/api'));
 app.use('/api', require('./routes/authorize'));
@@ -30,27 +23,7 @@ app.use('/api/groups', require('./routes/groups'));
 app.use('/api/photos', require('./routes/photos'));
 app.use('/dev', require('./routes/developer')); // dev stuff: TODO: make secure
 
-//var db = require('./helpers/dbInterface')('users');
-//var ObjectId = require('mongodb').ObjectID;
-/*db.put('users', {
-  userID: "sadlkjasdaslk"
-}, function(success, obj) {
-  console.log(obj);
-});*/
-
-/*db.get({
-  _id: ObjectId("57886297e46d0023751bc711")
-}, function(lol, obj) {
-  if (lol) console.log(obj);
-});*/
-
-/*db.update('users', 
-  { userID: "sadlkjasdaslk" }, 
-  { $set: { userID: 'LOLAads', test: 'lol'} }, 
-  function(success, obj) {
-  console.log(success);
-  console.log(obj);
-});*/
+// error handlers
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -59,10 +32,8 @@ app.use(function(req, res, next) {
   next(err);
 });
 
-// error handlers
-
 app.use(function(err, req, res, next) {
-  //res.status(err.status || 500);
+  res.status(err.status || 500);
   res.send('error ' + err.message);
 });
 

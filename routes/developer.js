@@ -18,6 +18,9 @@ var dbErrors = require('../helpers/dbInterface')('errors');
 
 var twilio = require('twilio')(config.twilio.accountSid, config.twilio.authToken);
 
+// TODO: clear all DB's
+// also, change verification method lol
+
 // Deploy on heroku 24 hrs
 
 function canAccess(req) {

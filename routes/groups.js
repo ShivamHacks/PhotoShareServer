@@ -16,39 +16,18 @@ var shortid = require('shortid');
 
 var _ = require('underscore');
 var encryption = require('../helpers/encryption');
-var e = require('../helpers/error');
-
-// Helper Functions
-function Request(req, res) {
-	this.body = returnBody(req);
-	this.send = function(result) { res.send(result); }
-}
-function returnBody(req) {
-	// REMEMBER -> in get requests, all body field keys are lowercase
-	if (req.method == 'POST') return req.body;
-	else if (req.method == 'GET') return req.headers;
-	else return req; // no change
-}
-function Error(status, message) {
-	this.status = status;
-	this.message = message;
-	this.toString = function() {
-		return JSON.stringify({
-			success: false,
-			status: this.status,
-			message: this.message
-		});
-	}
-}
+var request = require('../helpers/request');
 
 // Router Functions
 
 function createGroup(req, res, next) {
-	var r = new Request(req, res);
+
+	var r = request.new(req, res);
+
 	var members = r.body.members;
 	var userID = r.body.userID;
 	var phoneNumber = r.body.phoneNumber;
-	// TODO: get phone number from userID, either by putting it in token, or something else
+
 	getMembers(members, function(success, results) {
 		if (success) {
 			results.push({ userID: userID, phoneNumber: phoneNumber });
@@ -61,72 +40,82 @@ function createGroup(req, res, next) {
 			dbGroups.put(group, function(success, doc) {
 				if (success) {
 					updateMemberGroups(doc);
-					r.send(JSON.stringify({
+					r.success({
+						success: true,
 						groupID: doc._id,
 						groupName: doc.name
-					}));
+					});
 				}
-				else { r.send(new Error(500, 'Error Creating Group').toString()); }
+				else { r.error(500, 'Error Creating Group'); }
 			});
-		} else { r.send(new Error(500, 'Error Creating Group').toString()); }
+		} else { r.error(500, 'Error Creating Group'); }
 	});
 }
 
 function getAllGroups(req, res, next) {
-	var r = new Request(req, res);
-	dbUsers.get({ _id: ObjectId(req.body.userID) }, function(success, doc) {
+	
+	var r = request.new(req, res);
+
+	dbUsers.get({ _id: ObjectId(r.body.userID) }, function(success, doc) {
 		if (success) {
-			if (_.isEmpty(doc)) r.send(new Error(500, 'User does not exist').toString());
-			else r.send(JSON.stringify({ groups: doc.groups }));
-		} else { r.send(new Error(500, 'Error Getting Groups').toString()); }
+			if (_.isEmpty(doc)) r.error(500, 'User does not exist');
+			else r.success({ groups: doc.groups });
+		} else { r.error(500, 'Error Getting Groups'); }
 	});
 }
 
 function getGroupInfo(req, res, next) {
-	var r = new Request(req, res);
+	
+	var r = request.new(req, res);
+	
 	dbGroups.get({ _id: ObjectId(r.body.groupid) }, function(success, doc) {
 		if (success) {
 			if (_.isEmpty(doc)) { r.send(e.new(404, 'Group Not Found')); }
-				else {
-					var members = decryptMembers(_.pluck(doc.members, 'phoneNumber'));
-					r.send(JSON.stringify({
-						groupID: doc._id,
-						groupName: doc.name,
-						createdBy: doc.createdBy,
-						createdAt: doc.createdAt,
-						members: members
-					}));
-				}
-		} // TODO: error handling
+			else {
+				var members = decryptMembers(_.pluck(doc.members, 'phoneNumber'));
+				r.success({
+					groupID: doc._id,
+					groupName: doc.name,
+					createdBy: doc.createdBy,
+					createdAt: doc.createdAt,
+					members: members
+				});
+			}
+		} else { r.error(500, 'Error Getting Group Info');  }
 	});
 }
 
 function editGroup(req, res, next) {
-	var r = new Request(req, res);
+	
+	var r = request.new(req, res);
+	
 	var params = {};
-	if (r.body.newName != null) params.$set = { name: r.body.newName };
-	if (r.body.newMembers != null) {
+	if (typeof r.body.newName != 'undefined') params.$set = { name: r.body.newName };
+	if (typeof r.body.newMembers != 'undefined') {
 		getMembers(r.body.newMembers, function(success, results) {
 			if (success) {
 				params.$push = { members: { $each: results } };
 				dbGroups.update({ _id: ObjectId(r.body.groupID) }, params, function(success, doc) {
-					res.send(doc);
+					if (success) r.success({});
+					else r.error(500, 'Error Updating Group');
 				});
 			}
 		});
 	} else { 
-		if (_.isEmpty(params)) { ; } // nothing to update
+		if (_.isEmpty(params)) { r.send(JSON.stringify({ success: true })); } // nothing to update
 		else { // only update name
 			dbGroups.update({ _id: ObjectId(r.body.groupID) }, params, function(success, doc) {
-				res.send(doc);
+				if (success) r.success({});
+				else r.error(500, 'Error Updating Group');
 			});
 		}
 	}
-	// TODO: error handling
 }
 
 function leaveGroup(req, res, next) {
-	var r = new Request(req, res);
+	
+	var r = request.new(req, res);
+	
 	var userID = r.body.userID;
 	var groupID = r.body.groupID;
 	var userParams = { $pull: { groups: ObjectId(groupID) } };
@@ -134,17 +123,19 @@ function leaveGroup(req, res, next) {
 	dbUsers.update({ _id: ObjectId(r.body.userID) }, userParams, function(success, doc) {});
 	dbGroups.update({ _id: ObjectId(r.body.groupID) }, groupParams, function(success, doc) {
 		if (success) {
-			if (_.isEmpty(doc)) { res.send('No group w/ this id'); }
+			if (_.isEmpty(doc)) { r.error('Group does not exist'); }
 			else {
 				if (doc.members.length == 0) deleteGroup(groupID);
-				res.send('All good');
+				r.success({});
 			}
 		}
 	});
 }
 
+module.exports = router;
 
 // Router Helper Functions
+
 function updateMemberGroups(doc) {
 	var params = { $push: { groups: { groupID: doc._id, groupName: doc.name } } };
 	for (var i = 0; i < doc.members.length; i++) {
@@ -175,7 +166,7 @@ function deleteGroup(groupID) {
 		if (success) {
 			if (!(_.isEmpty(group))) 
 				dbGroups.remove({ _id: ObjectId(groupID) }, function(success) {});
-		} else { res.send('Unknown error'); }
+		}
 	});
 }
 function decryptMembers(members) {
@@ -183,10 +174,3 @@ function decryptMembers(members) {
 		members[i] = encryption.decrypt(members[i]);
 	return members;
 }
-
-// any time new group is added, the groupID and the date member was added is pushed the user array of groups
-// then whenever user launches app, the app loads all the groups for the user. The thing to figure out is,
-// when the user views a group/edits a group how should it appear on the top of the groups list. Would that be too much server syncing?
-// for now, we will sync EVERY TIME anything is changed, just to get development faster.
-
-module.exports = router;
