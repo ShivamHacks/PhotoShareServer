@@ -6,6 +6,7 @@
     "start": "node ./app"
   },
   "dependencies": {
+    "async": "^2.0.1",
     "body-parser": "~1.15.1",
     "clarifai": "^1.2.1",
     "cloudinary": "^1.4.1",

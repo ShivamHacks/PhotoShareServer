@@ -9,7 +9,7 @@ var ObjectId = require('mongodb').ObjectID;
 var cloudinary = require('cloudinary');
 cloudinary.config(config.cloudinary);
 
-var request = require('request');
+var requester = require('request');
 var _ = require('underscore');
 var request = require('../helpers/request');
 
@@ -39,7 +39,7 @@ router.get('/get', function(req, res, next) {
 	dbPhotos.get({ _id: ObjectId(photoID) }, function(success, result) {
 		if (success) {
 			var url = result.url;
-			request(url).pipe(res);
+			requester(url).pipe(res);
 		} else { res.send(e.new('Error retrieving image')); }
 	});
 	// For now: if image does not exist, just send an image of no image

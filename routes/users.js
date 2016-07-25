@@ -9,7 +9,7 @@ var dbUsers = require('../helpers/dbInterface')('users');
 var ObjectId = require('mongodb').ObjectID;
 
 var twilio = require('twilio')(config.twilio.accountSid, config.twilio.authToken);
-var verficationGen = require('randomstring');
+var verificationGen = require('randomstring');
 var encryption = require('../helpers/encryption');
 var jwt = require('jsonwebtoken');
 
@@ -38,10 +38,10 @@ router.post('/login', function(req, res, next) {
 				unverifiedUsersDB.put({
 					phoneNumber: encryption.encrypt(internationalPhoneNumber),
 					password: encryption.encrypt(password),
-					verficationCode: verficationGen.generate({ length: 6, charset: 'numeric' })
+					verificationCode: verificationGen.generate({ length: 6, charset: 'numeric' })
 				}, function(success, doc) {
 					if (success) {
-						sendText(internationalPhoneNumber, doc.verficationCode, function(sent) {
+						sendText(internationalPhoneNumber, doc.verificationCode, function(sent) {
 							if (sent) {
 								r.success({ 
 									success: true,
@@ -70,10 +70,10 @@ router.post('/signup', function(req, res, next) {
 	unverifiedUsersDB.put({
 		phoneNumber: encryption.encrypt(internationalPhoneNumber),
 		password: encryption.encrypt(password),
-		verficationCode: verficationGen.generate({ length: 6, charset: 'numeric' }),
+		verificationCode: verificationGen.generate({ length: 6, charset: 'numeric' }),
 	}, function(success, doc) {
 		if (success) {
-			sendText(internationalPhoneNumber, doc.verficationCode, function(sent) {
+			sendText(internationalPhoneNumber, doc.verificationCode, function(sent) {
 				if (sent) r.success({ userID: doc._id });
 				else r.error(500, 'Error sending verification text');
 			});
@@ -87,12 +87,12 @@ router.post('/verify', function(req, res, next) {
 	var r = request.new(req, res);
 
 	var userID = r.body.userID;
-	var verficationCode = r.body.verficationCode;
+	var verificationCode = r.body.verificationCode;
 
 	unverifiedUsersDB.get({ _id: ObjectId(userID) }, function (success, doc) {
 		if (success && !(_.isEmpty(doc))) {
-			if (verficationCode == doc.verficationCode) {
-				delete doc.verficationCode;
+			if (verificationCode == doc.verificationCode) {
+				delete doc.verificationCode;
 				doc.groups = [];
 				dbUsers.put(doc, function (success, doc) {
 					if (success) {
@@ -115,11 +115,11 @@ router.post('/verify', function(req, res, next) {
 });
 
 // TODO: make official Twilio account, can't use trial
-function sendText(phoneNumber, verficationCode, callback) {
+function sendText(phoneNumber, verificationCode, callback) {
 	twilio.messages.create({
 		to: phoneNumber,
 		from: nativeNumber,
-		body: 'PictureUs verification Code: ' + verficationCode,
+		body: 'PictureUs verification Code: ' + verificationCode,
 	}, function (err, message) {
 		if (err) { callback(false); }
 		else { callback(true); }

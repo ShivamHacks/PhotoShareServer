@@ -24,13 +24,7 @@ var twilio = require('twilio')(config.twilio.accountSid, config.twilio.authToken
 // Deploy on heroku 24 hrs
 
 function canAccess(req) {
-	var body;
-	if (req.method == 'POST') body = req.body;
-	else if (req.method == 'GET') body = req.headers;
-	if (typeof body != 'undefined') {
-		if (body.key1 == numKey && body.key2 == alphaKey) return true;
-		else return false;
-	} else { return false; }
+	return true;
 }
 
 router.get('/requestDevAccess', function(req, res, next) {
@@ -66,6 +60,49 @@ router.get('/dbStatus', function(req, res, next) {
 		});
 	} else { res.send('Not Authorized'); }
 });
+
+var dbUsers = require('../helpers/dbInterface')('users');
+var dbGroups = require('../helpers/dbInterface')('groups');
+var dbPhotos = require('../helpers/dbInterface')('photos');
+var async = require('async');
+
+router.get('/dbAll', function(req, res, next) {
+	if (canAccess(req)) {
+		var body = {};
+		async.waterfall([
+			function(callback) {
+				dbUsers.getMany({}, function(success, docs) { 
+					body.users = docs;
+					callback(null, body); 
+				});
+			},
+			function(body, callback) {
+				dbGroups.getMany({}, function(success, docs) { 
+					body.groups = docs; 
+					callback(null, body);
+				});
+			},
+			function(body, callback) {
+				dbPhotos.getMany({}, function(success, docs) { 
+					body.photos = docs;
+					callback(null, body);
+				});
+			}
+		], function(err, result) {
+			res.json(result);
+		});
+	} else { res.send('Not Authorized'); }
+});
+
+router.post('/dbClear', function(req, res, next) {
+	if (canAccess(req)) {
+		dbUsers.remove({}, function(success) {});
+		dbGroups.remove({}, function(success) {});
+		dbPhotos.remove({}, function(success) {});
+		res.send('Deleting all DB rows');
+	} else { res.send('Not Authorized'); }
+});
+
 
 router.post('/dbShutdown', function(req, res, next) {
 	if (canAccess(req)) {

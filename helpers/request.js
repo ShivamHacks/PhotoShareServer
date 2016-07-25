@@ -39,6 +39,7 @@ function Request(req, res) {
 	}
 }
 function returnBody(req) {
+	// TODO: include req.query in this
 	// REMEMBER -> in get requests, all body field keys are lowercase
 	if (req.method == 'POST') return req.body;
 	else if (req.method == 'GET') return req.headers;

@@ -18,8 +18,13 @@ router.use('/', function(req, res, next) {
 			try {
 				var decoded = jwt.verify(token, jwtSecret);
 				// if decoded, that means that user is authorized
-				req.body.userID = decoded.userID;
-				req.body.phoneNumber = decoded.phoneNumber;
+				if (req.method == 'POST') {
+					req.body.userID = decoded.userID;
+					req.body.phoneNumber = decoded.phoneNumber;
+				} else if (req.method == 'GET') {
+					req.headers.userID = decoded.userID;
+					req.headers.phoneNumber = decoded.phoneNumber;
+				}
 				next();
 			} catch(err) {
 				res.send(JSON.stringify({
