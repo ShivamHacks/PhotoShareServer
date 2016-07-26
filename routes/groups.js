@@ -45,10 +45,9 @@ function createGroup(req, res, next) {
 						groupID: doc._id,
 						groupName: doc.name
 					});
-				}
-				else { r.error(500, 'Error Creating Group'); }
+				} else { r.error(500, 'Error Creating Group', userID, req.url); }
 			});
-		} else { r.error(500, 'Error Creating Group'); }
+		} else { r.error(500, 'Error Creating Group', userID, req.url); }
 	});
 }
 
@@ -56,21 +55,25 @@ function getAllGroups(req, res, next) {
 	
 	var r = request.new(req, res);
 
-	dbUsers.get({ _id: ObjectId(r.body.userID) }, function(success, doc) {
+	var userID = r.body.userID;
+
+	dbUsers.get({ _id: ObjectId(userID) }, function(success, doc) {
 		if (success) {
-			if (_.isEmpty(doc)) r.error(500, 'User does not exist');
+			if (_.isEmpty(doc)) r.error(500, 'User does not exist', userID, req.url);
 			else r.success({ groups: doc.groups });
-		} else { r.error(500, 'Error Getting Groups'); }
+		} else { r.error(500, 'Error Getting Groups', userID, req.url); }
 	});
 }
 
 function getGroupInfo(req, res, next) {
 	
 	var r = request.new(req, res);
+
+	var userID = r.body.userID;
 	
 	dbGroups.get({ _id: ObjectId(r.body.groupid) }, function(success, doc) {
 		if (success) {
-			if (_.isEmpty(doc)) { r.send(e.new(404, 'Group Not Found')); }
+			if (_.isEmpty(doc)) { r.error(404, 'Group Not Found', userID, req.url); }
 			else {
 				var members = decryptMembers(_.pluck(doc.members, 'phoneNumber'));
 				r.success({
@@ -81,13 +84,15 @@ function getGroupInfo(req, res, next) {
 					members: members
 				});
 			}
-		} else { r.error(500, 'Error Getting Group Info');  }
+		} else { r.error(500, 'Error Getting Group Info', userID, req.url);  }
 	});
 }
 
 function editGroup(req, res, next) {
 	
 	var r = request.new(req, res);
+
+	var userID = r.body.userID;
 	
 	var params = {};
 	if (typeof r.body.newName != 'undefined') params.$set = { name: r.body.newName };
@@ -97,16 +102,16 @@ function editGroup(req, res, next) {
 				params.$push = { members: { $each: results } };
 				dbGroups.update({ _id: ObjectId(r.body.groupID) }, params, function(success, doc) {
 					if (success) r.success({});
-					else r.error(500, 'Error Updating Group');
+					else r.error(500, 'Error Updating Group Members', userID, req.url);
 				});
 			}
 		});
 	} else { 
-		if (_.isEmpty(params)) { r.send(JSON.stringify({ success: true })); } // nothing to update
+		if (_.isEmpty(params)) { r.success({}); } // nothing to update
 		else { // only update name
 			dbGroups.update({ _id: ObjectId(r.body.groupID) }, params, function(success, doc) {
 				if (success) r.success({});
-				else r.error(500, 'Error Updating Group');
+				else r.error(500, 'Error Updating Group Name', userID, req.url);
 			});
 		}
 	}
@@ -118,17 +123,18 @@ function leaveGroup(req, res, next) {
 	
 	var userID = r.body.userID;
 	var groupID = r.body.groupID;
+
 	var userParams = { $pull: { groups: ObjectId(groupID) } };
 	var groupParams = { $pull: { members: { userID: userID } } };
 	dbUsers.update({ _id: ObjectId(r.body.userID) }, userParams, function(success, doc) {});
 	dbGroups.update({ _id: ObjectId(r.body.groupID) }, groupParams, function(success, doc) {
 		if (success) {
-			if (_.isEmpty(doc)) { r.error('Group does not exist'); }
+			if (_.isEmpty(doc)) { r.error(400, 'Group does not exist', userID, req.url); }
 			else {
 				if (doc.members.length == 0) deleteGroup(groupID);
 				r.success({});
 			}
-		}
+		} else { r.error(500, 'Error leaving group', userID, req.url); }
 	});
 }
 

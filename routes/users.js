@@ -47,12 +47,12 @@ router.post('/login', function(req, res, next) {
 									success: true,
 									userID: doc._id 
 								});
-							} else { r.error(500, 'Error sending verification text'); }
+							} else { r.error(500, 'Error sending verification text', null, req.url); }
 						});
-					} else { r.error(500, 'Something went wrong'); }
+					} else { r.error(500, 'Something went wrong', null, req.url); }
 				});
-			} else { r.error(400, 'Incorrect password'); }
-		} else { r.error(500, 'Something went wrong'); }
+			} else { r.error(400, 'Incorrect password', null, req.url); }
+		} else { r.error(400, 'Account does not exist', null, req.url); }
 	});
 
 });
@@ -75,9 +75,9 @@ router.post('/signup', function(req, res, next) {
 		if (success) {
 			sendText(internationalPhoneNumber, doc.verificationCode, function(sent) {
 				if (sent) r.success({ userID: doc._id });
-				else r.error(500, 'Error sending verification text');
+				else r.error(500, 'Error sending verification text', null, req.url);
 			});
-		} else { r.error(500, 'Something went wrong'); }
+		} else { r.error(500, 'Something went wrong', null, req.url); }
 	});
 
 });
@@ -106,10 +106,10 @@ router.post('/verify', function(req, res, next) {
 								phoneNumber: doc.phoneNumber 
 							}, jwtSecret) 
 						});
-					} else { r.error(500, 'Error verifying account'); }
+					} else { r.error(500, 'Error verifying account', null, req.url); }
 				});
-			} else { r.error(400, 'Incorrect verification code'); }
-		} else { r.error(500, 'Something went wrong'); }
+			} else { r.error(400, 'Incorrect verification code', null, req.url); }
+		} else { r.error(500, 'Error verifying account', null, req.url); }
 	});
 
 });

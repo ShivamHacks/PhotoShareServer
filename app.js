@@ -8,6 +8,7 @@ var app = express();
 
 app.listen(process.env.PORT || '3000', function () {
   console.log('Server started on port: ' + this.address().port);
+  // this.close(); --> just to test forever script
 });
 
 app.use(morgan('dev'));

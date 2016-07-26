@@ -16,10 +16,12 @@ function Success(object) {
 		return JSON.stringify(this);
 	};
 }
-function Error(status, message) {
+function Error(status, message, userID, intent) {
 	dbErrors.put({
 		status: status,
-		message: message
+		message: message,
+		userID: userID,
+		intent: intent
 	}, function(success, obj) {});
 	this.success = false;
 	this.status = status;
