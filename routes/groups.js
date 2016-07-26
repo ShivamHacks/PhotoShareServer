@@ -114,8 +114,7 @@ function editGroup(req, res, next) {
 				});
 			}
 		});
-	} else { 
-		console.log(params);
+	} else {
 		if (_.isEmpty(params)) { r.success({}); } // nothing to update
 		else { // only update name
 			dbGroups.update({ _id: ObjectId(r.body.groupID) }, params, function(success, doc) {
