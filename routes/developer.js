@@ -9,6 +9,7 @@ var MongoClient = require('mongodb').MongoClient;
 var url = config.mongoURL;
 
 var dbErrors = require('../helpers/dbInterface')('errors');
+var dbUnverified = require('../helpers/dbInterface')('unverifiedUsers');
 var dbUsers = require('../helpers/dbInterface')('users');
 var dbGroups = require('../helpers/dbInterface')('groups');
 var dbPhotos = require('../helpers/dbInterface')('photos');
@@ -64,6 +65,16 @@ router.get('/dbAll', function(req, res, next) {
 				});
 			},
 			function(body, callback) {
+				dbUnverified.getMany({}, function(success, docs) { 
+					if (success) {
+						body.unverified = docs;
+						callback(null, body); 
+					} else {
+						callback(docs); // docs = err
+					}
+				});
+			},
+			function(body, callback) {
 				dbGroups.getMany({}, function(success, docs) { 
 					if (success) {
 						body.groups = docs;
@@ -77,6 +88,16 @@ router.get('/dbAll', function(req, res, next) {
 				dbPhotos.getMany({}, function(success, docs) { 
 					if (success) {
 						body.photos = docs;
+						callback(null, body); 
+					} else {
+						callback(docs); // docs = err
+					}
+				});
+			},
+			function(body, callback) {
+				dbErrors.getMany({}, function(success, docs) { 
+					if (success) {
+						body.errors = docs;
 						callback(null, body); 
 					} else {
 						callback(docs); // docs = err

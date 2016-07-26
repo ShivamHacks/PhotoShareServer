@@ -16,22 +16,24 @@ cloudinary.config(config.cloudinary);
 var requester = require('request');
 var _ = require('underscore');
 var request = require('../helpers/request');
+var fs = require('fs');
 
 router.post('/upload', function(req, res, next) {
 
 	var r = request.new(req, res);
 
 	var userID = r.body.userID;
-	var base = 'data:image/png;base64,';
+	//var base = 'data:image/jpg;base64,';
+	var buff = new Buffer(r.body.image, 'base64');
+	var path = 'uploads/' + new ObjectId() + '.jpg';
 
-	console.log('Got Photo Upload');
-
-	cloudinary.v2.uploader.upload(base + r.body.image, function(err, result) {
-		if (err) { r.error(500, 'Error uploading photo'); }
+	fs.writeFile(path, buff, function(err) {
+		// upload to my server first to make sure request is fulfilled
+		if (err) { r.error(500, 'Error saving photo', userID, req.url); }
 		else {
 			dbPhotos.put({
-				capturedBy: userID, // TODO: add easier user identification
-				url: result.secure_url,
+				capturedBy: userID,
+				url: path,
 				capturedAt: r.body.capturedAt,
 				group: r.body.groupID
 			}, function(success, doc) {
@@ -40,16 +42,20 @@ router.post('/upload', function(req, res, next) {
 			});
 		}
 	});
+
 });
 
 router.get('/get', function(req, res, next) {
+
+	var r = request.new(req, res);
 
 	var photoID = req.query.photoid;
 
 	dbPhotos.get({ _id: ObjectId(photoID) }, function(success, result) {
 		if (success) {
 			var url = result.url;
-			requester(url).pipe(res);
+			//requester(url).pipe(res);
+			fs.createReadStream(url).pipe(res);
 		} else { r.error(500, 'Error retrieving image', null, req.url); }
 	});
 	// For now: if image does not exist, just send an image of no image
@@ -77,3 +83,19 @@ router.get('/getAll', function(req, res, next) {
 });
 
 module.exports = router;
+
+/*cloudinary.uploader.upload(path, function(error, result) {
+				if (error) { r.error(500, 'Error saving photo', userID, req.url); }
+				else {
+					fs.unlink(path);
+					dbPhotos.put({
+						capturedBy: userID,
+						url: result.secure_url,
+						capturedAt: r.body.capturedAt,
+						group: r.body.groupID
+					}, function(success, doc) {
+						if (success) r.success({}); 
+						else r.error(500, 'Error saving photo', userID, req.url);
+					});
+				}
+			});*/

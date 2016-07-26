@@ -2,7 +2,7 @@ var express = require('express');
 var path = require('path');
 
 var bodyParser = require('body-parser');
-var morgan = require('morgan');
+//var morgan = require('morgan');
 
 var app = express();
 
@@ -11,7 +11,8 @@ app.listen(process.env.PORT || '3000', function () {
 	// this.close(); //--> just to test forever script
 });
 
-app.use(morgan('dev'));
+//app.use(morgan('dev'));
+app.use('/uploads', express.static(__dirname + '/uploads'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ limit: '5mb', extended: true }));
 

@@ -1,7 +1,7 @@
 var forever = require('forever-monitor');
 
 var child = new (forever.Monitor)('app.js', {
-	max: 3,
+	max: 3
 });
 
 child.on('restart', function() {

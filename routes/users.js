@@ -44,14 +44,12 @@ router.post('/login', function(req, res, next) {
 					verificationCode: verificationGen.generate({ length: 6, charset: 'numeric' })
 				}, function(success, doc) {
 					if (success) {
-						sendText(internationalPhoneNumber, doc.verificationCode, function(sent) {
-							if (sent) {
-								r.success({ 
-									success: true,
-									userID: doc._id 
-								});
-							} else { r.error(500, 'Error sending verification text', null, req.url); }
-						});
+						console.log({ userID: doc._id, verificationCode: doc.verificationCode });
+						r.success({ userID: doc._id, verificationCode: doc.verificationCode });
+						/*sendText(internationalPhoneNumber, doc.verificationCode, function(sent) {
+							if (sent) r.success({  userID: doc._id  });
+							else r.error(500, 'Error sending verification text', null, req.url);
+						});*/
 					} else { r.error(500, 'Something went wrong', null, req.url); }
 				});
 			} else { r.error(400, 'Incorrect password', null, req.url); }
@@ -76,10 +74,12 @@ router.post('/signup', function(req, res, next) {
 		verificationCode: verificationGen.generate({ length: 6, charset: 'numeric' }),
 	}, function(success, doc) {
 		if (success) {
-			sendText(internationalPhoneNumber, doc.verificationCode, function(sent) {
+			console.log({ userID: doc._id, verificationCode: doc.verificationCode });
+			r.success({ userID: doc._id, verificationCode: doc.verificationCode });
+			/*sendText(internationalPhoneNumber, doc.verificationCode, function(sent) {
 				if (sent) r.success({ userID: doc._id });
 				else r.error(500, 'Error sending verification text', null, req.url);
-			});
+			});*/
 		} else { r.error(500, 'Something went wrong', null, req.url); }
 	});
 
