@@ -11,6 +11,7 @@ router.post('/leaveGroup', leaveGroup);
 // Dependencies
 var dbUsers = require('../helpers/dbInterface')('users');
 var dbGroups = require('../helpers/dbInterface')('groups');
+var dbPhotos = require('../helpers/dbInterface')('photos');
 var ObjectId = require('mongodb').ObjectID;
 var shortid = require('shortid');
 
@@ -184,6 +185,7 @@ function deleteGroup(groupID, userID) {
 		if (success) {
 			if (!(_.isEmpty(group))) {
 				dbGroups.remove({ _id: ObjectId(groupID) }, function(success) {});
+				dbPhotos.remove({ group: groupID }, function(success) {});
 			}
 		}
 	});

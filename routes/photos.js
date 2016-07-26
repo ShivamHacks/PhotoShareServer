@@ -24,6 +24,8 @@ router.post('/upload', function(req, res, next) {
 	var userID = r.body.userID;
 	var base = 'data:image/png;base64,';
 
+	console.log('Got Photo Upload');
+
 	cloudinary.v2.uploader.upload(base + r.body.image, function(err, result) {
 		if (err) { r.error(500, 'Error uploading photo'); }
 		else {

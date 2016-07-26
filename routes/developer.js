@@ -99,6 +99,15 @@ router.post('/dbClear', function(req, res, next) {
 	} else { res.send('Not Authorized'); }
 });
 
+router.post('/dbClearOne', function(req, res, next) {
+	if (canAccess(req)) {
+		if (req.body.remove == 'users') dbUsers.remove({}, function(success) {});
+		else if (req.body.remove == 'groups') dbGroups.remove({}, function(success) {});
+		else if (req.body.remove == 'photos') dbPhotos.remove({}, function(success) {});
+		res.send('Deleting all DB rows in: ' + req.body.remove);
+	} else { res.send('Not Authorized'); }
+});
+
 router.get('/dbErrors', function(req, res, next) {
 	if (canAccess(req)) {
 		var skip = req.body.skip == undefined ? 0 : parseInt(req.body.skip);
