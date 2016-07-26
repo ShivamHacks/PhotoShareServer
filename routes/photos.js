@@ -45,7 +45,6 @@ router.get('/get', function(req, res, next) {
 	var photoID = req.query.photoid;
 
 	dbPhotos.get({ _id: ObjectId(photoID) }, function(success, result) {
-		console.log(result);
 		if (success) {
 			var url = result.url;
 			requester(url).pipe(res);

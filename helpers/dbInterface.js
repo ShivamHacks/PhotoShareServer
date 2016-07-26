@@ -35,7 +35,9 @@ module.exports = function(collection) {
 		MongoClient.connect(url, function(err, db) {
 			if (err) { callback(false, err); }
 			else {
-				db.collection(collection).findAndModify(query, [], params, { new: true }, function(err,doc) {
+				db.collection(collection).findAndModify(query, [], params, { new: true }, function(err, doc) {
+					console.log(err);
+					console.log(doc);
 					if (err) callback(false, err);
 					else callback(true, doc.value);
 					db.close();

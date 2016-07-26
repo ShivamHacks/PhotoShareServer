@@ -60,7 +60,12 @@ function getAllGroups(req, res, next) {
 	dbUsers.get({ _id: ObjectId(userID) }, function(success, doc) {
 		if (success) {
 			if (_.isEmpty(doc)) r.error(500, 'User does not exist', userID, req.url);
-			else r.success({ groups: doc.groups });
+			else {
+				getGroupNamesFromIDs(doc.groups, function(success, results) {
+					if (success) r.success({ groups: results });
+					else r.error(500, 'Error Getting Groups', userID, req.url);
+				});
+			}
 		} else { r.error(500, 'Error Getting Groups', userID, req.url); }
 	});
 }
@@ -95,7 +100,9 @@ function editGroup(req, res, next) {
 	var userID = r.body.userID;
 	
 	var params = {};
-	if (typeof r.body.newName != 'undefined') params.$set = { name: r.body.newName };
+	if (typeof r.body.newName != 'undefined') {
+		params.$set = { name: r.body.newName };
+	}
 	if (typeof r.body.newMembers != 'undefined') {
 		getMembers(r.body.newMembers, function(success, results) {
 			if (success) {
@@ -107,6 +114,7 @@ function editGroup(req, res, next) {
 			}
 		});
 	} else { 
+		console.log(params);
 		if (_.isEmpty(params)) { r.success({}); } // nothing to update
 		else { // only update name
 			dbGroups.update({ _id: ObjectId(r.body.groupID) }, params, function(success, doc) {
@@ -131,7 +139,7 @@ function leaveGroup(req, res, next) {
 		if (success) {
 			if (_.isEmpty(doc)) { r.error(400, 'Group does not exist', userID, req.url); }
 			else {
-				if (doc.members.length == 0) deleteGroup(groupID);
+				if (doc.members.length == 0) deleteGroup(groupID, userID);
 				r.success({});
 			}
 		} else { r.error(500, 'Error leaving group', userID, req.url); }
@@ -143,7 +151,7 @@ module.exports = router;
 // Router Helper Functions
 
 function updateMemberGroups(doc) {
-	var params = { $push: { groups: { groupID: doc._id, groupName: doc.name } } };
+	var params = { $push: { groups: doc._id } };
 	for (var i = 0; i < doc.members.length; i++) {
 		dbUsers.update({ _id: ObjectId(doc.members[i].userID) }, params, function(success, obj) {});
 		// TODO: error handling for this
@@ -154,10 +162,14 @@ function getMembers(members, callback) {
 	var encryptedNumbers = _.map(members, function(member) { 
 		return encryption.encrypt(member); 
 	});
-	dbUsers.getMany({ phoneNumber: { $in: encryptedNumbers} }, function(success, results) {
+	dbUsers.getMany({ 
+		phoneNumber: { $in: encryptedNumbers} 
+	}, function(success, results) {
 		if (success) {
 			var dbNumbers = _.pluck(results, 'phoneNumber');
-			var categorize = _.groupBy(encryptedNumbers, function(number) { return _.contains(dbNumbers, number);  });
+			var categorize = _.groupBy(encryptedNumbers, function(number) { 
+				return _.contains(dbNumbers, number);  
+			});
 			var existingUsers = _.map(_.filter(results, function(obj) { 
 				return _.contains(categorize.true, obj.phoneNumber); 
 			}), function(mem) {
@@ -167,11 +179,12 @@ function getMembers(members, callback) {
 		} else callback(false, null);
 	});
 }
-function deleteGroup(groupID) {
+function deleteGroup(groupID, userID) {
 	dbGroups.get({ _id: ObjectId(groupID) }, function(success, group) {
 		if (success) {
-			if (!(_.isEmpty(group))) 
+			if (!(_.isEmpty(group))) {
 				dbGroups.remove({ _id: ObjectId(groupID) }, function(success) {});
+			}
 		}
 	});
 }
@@ -179,4 +192,17 @@ function decryptMembers(members) {
 	for (var i = 0; i < members.length; i++)
 		members[i] = encryption.decrypt(members[i]);
 	return members;
+}
+function getGroupNamesFromIDs(ids, callback) {
+	dbGroups.getMany({ _id: { $in: ids } }, function(success, results) {
+		if (success) {
+			var groups = _.map(results, function(doc) {
+				return { 
+					groupID: doc._id,
+					groupName: doc.name
+				};
+			});
+			callback(true, groups);
+		} else { callback(false, null); }
+	});
 }
