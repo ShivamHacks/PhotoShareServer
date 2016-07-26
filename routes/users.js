@@ -5,7 +5,10 @@ var config = require('../config');
 var countries = require('country-data').countries;
 
 var unverifiedUsersDB = require('../helpers/dbInterface')('unverifiedUsers');
+unverifiedUsersDB.remove({}, function(success) {});
+
 var dbUsers = require('../helpers/dbInterface')('users');
+
 var ObjectId = require('mongodb').ObjectID;
 
 var twilio = require('twilio')(config.twilio.accountSid, config.twilio.authToken);
@@ -88,26 +91,56 @@ router.post('/verify', function(req, res, next) {
 
 	var userID = r.body.userID;
 	var verificationCode = r.body.verificationCode;
+	var intent = r.body.intent;
+
+	var phoneNumber = r.body.phoneNumber;
+	var countryISO = r.body.countryISO.toUpperCase();
+	var internationalPhoneNumber = countries[countryISO].countryCallingCodes[0] + phoneNumber;
+	console.log(internationalPhoneNumber);
 
 	unverifiedUsersDB.get({ _id: ObjectId(userID) }, function (success, doc) {
 		if (success && !(_.isEmpty(doc))) {
 			if (verificationCode == doc.verificationCode) {
 				delete doc.verificationCode;
-				doc.groups = [];
-				dbUsers.put(doc, function (success, doc) {
-					if (success) {
-						unverifiedUsersDB.remove({ _id: ObjectId(userID) }, function(success) {});
-						dbUsers.remove({ phoneNumber: doc.phoneNumber, _id: { 
-							$ne: ObjectId(userID) } 
-						}, function(success) {});
-						r.success({
-							token: jwt.sign({ 
-								userID: doc._id, 
-								phoneNumber: doc.phoneNumber 
-							}, jwtSecret) 
-						});
-					} else { r.error(500, 'Error verifying account', null, req.url); }
-				});
+
+				if (intent == 'signup') {
+
+					doc.groups = [];
+					dbUsers.put(doc, function (success, doc) {
+						if (success) {
+							unverifiedUsersDB.remove({ _id: ObjectId(userID) }, function(success) {});
+
+							dbUsers.remove({ phoneNumber: doc.phoneNumber, _id: { 
+								$ne: ObjectId(userID) } 
+							}, function(success) {});
+
+							r.success({
+								token: jwt.sign({ 
+									userID: doc._id, 
+									phoneNumber: doc.phoneNumber 
+								}, jwtSecret) 
+							});
+						} else { r.error(500, 'Error verifying account', null, req.url); }
+					});
+
+				} else if (intent == 'login') {
+
+					unverifiedUsersDB.remove({ _id: ObjectId(userID) }, function(success) {});
+					dbUsers.get({ 
+						phoneNumber: encryption.encrypt(internationalPhoneNumber)
+					}, function(success, doc) {
+						if (success) { 
+							r.success({
+								token: jwt.sign({ 
+									userID: doc._id, 
+									phoneNumber: doc.phoneNumber 
+								}, jwtSecret) 
+							});
+						} else {  r.error(500, 'Error logging in', null, req.url); }
+					});
+
+				} else { r.error(400, 'Unknown login/signup intent', null, req.url); }
+
 			} else { r.error(400, 'Incorrect verification code', null, req.url); }
 		} else { r.error(500, 'Error verifying account', null, req.url); }
 	});

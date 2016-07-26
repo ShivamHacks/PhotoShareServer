@@ -43,13 +43,13 @@ router.post('/upload', function(req, res, next) {
 router.get('/get', function(req, res, next) {
 
 	var photoID = req.query.photoid;
-	var userID = r.body.userID;
 
 	dbPhotos.get({ _id: ObjectId(photoID) }, function(success, result) {
+		console.log(result);
 		if (success) {
 			var url = result.url;
 			requester(url).pipe(res);
-		} else { r.error(500, 'Error retrieving image', userID, req.url); }
+		} else { r.error(500, 'Error retrieving image', null, req.url); }
 	});
 	// For now: if image does not exist, just send an image of no image
 });

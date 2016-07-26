@@ -21,7 +21,8 @@ function Error(status, message, userID, intent) {
 		status: status,
 		message: message,
 		userID: userID,
-		intent: intent
+		intent: intent,
+		occuredAt: Date.now()
 	}, function(success, obj) {});
 	this.success = false;
 	this.status = status;
