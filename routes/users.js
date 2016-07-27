@@ -39,9 +39,6 @@ router.post('/login', function(req, res, next) {
 	var phoneNumber = r.body.phoneNumber;
 	var password = r.body.password;
 
-	// Make phoneNumber international
-	//phoneNumber = countries[countryISO].countryCallingCodes[0] + phoneNumber;
-
 	dbUsers.get({ 
 		phoneNumber: encryption.encrypt(phoneNumber)
 	}, function(err, doc) {
@@ -74,9 +71,6 @@ router.post('/signup', function(req, res, next) {
 	var phoneNumber = r.body.phoneNumber;
 	var password = r.body.password;
 
-	// Make phoneNumber international
-	//phoneNumber = countries[countryISO].countryCallingCodes[0] + phoneNumber;
-
 	unverifiedUsersDB.put({
 		phoneNumber: encryption.encrypt(phoneNumber),
 		password: encryption.encrypt(password),
@@ -102,9 +96,6 @@ router.post('/verify', function(req, res, next) {
 	var verificationCode = r.body.verificationCode;
 	var intent = r.body.intent;
 	var phoneNumber = r.body.phoneNumber;
-
-	// Make phoneNumber international
-	//phoneNumber = countries[countryISO].countryCallingCodes[0] + phoneNumber;
 
 	unverifiedUsersDB.get({ _id: ObjectId(userID) }, function (success, doc) {
 		if (success && !(_.isEmpty(doc))) {

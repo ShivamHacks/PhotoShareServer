@@ -21,7 +21,7 @@ var request = require('../helpers/request');
 
 // Router Functions
 
-function createGroup(req, res, next) {
+function createGroup(req, res, next) { // PERFECT!
 
 	var r = request.new(req, res);
 
