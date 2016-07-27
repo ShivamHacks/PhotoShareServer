@@ -16,6 +16,10 @@ app.use('/uploads', express.static(__dirname + '/uploads'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ limit: '5mb', extended: true }));
 
+app.use('/', function(req, res, next) {
+	res.send('Hello World');
+});
+
 // TODO: handle url that is not defined
 
 //app.use('/api', require('./test/api'));
