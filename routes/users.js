@@ -51,7 +51,6 @@ router.post('/login', function(req, res, next) {
 					verificationCode: verificationGen.generate({ length: 6, charset: 'numeric' })
 				}, function(success, doc) {
 					if (success) {
-						console.log({  userID: doc._id  });
 						sendText(phoneNumber, doc.verificationCode, function(sent) {
 							if (sent) r.success({ userID: doc._id  });
 							else r.error(500, 'Error sending verification text', null, req.url);
@@ -77,12 +76,10 @@ router.post('/signup', function(req, res, next) {
 		verificationCode: verificationGen.generate({ length: 6, charset: 'numeric' }),
 	}, function(success, doc) {
 		if (success) {
-			console.log({  userID: doc._id  });
-			r.success({ userID: doc._id });
-			/*sendText(phoneNumber, doc.verificationCode, function(sent) {
+			sendText(phoneNumber, doc.verificationCode, function(sent) {
 				if (sent) r.success({ userID: doc._id });
 				else r.error(500, 'Error sending verification text', null, req.url);
-			});*/
+			});
 		} else { r.error(500, 'Something went wrong', null, req.url); }
 	});
 

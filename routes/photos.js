@@ -6,7 +6,7 @@ var dbPhotos = require('../helpers/dbInterface')('photos');
 
 // Initialized DB w/ indexes and such
 dbPhotos.dropAllIndexes();
-dbPhotos.createIndex({ "group": 1, "capturedAt": -1 });
+dbPhotos.createIndex({ "group": 1 });
 
 var ObjectId = require('mongodb').ObjectID;
 
@@ -16,49 +16,35 @@ cloudinary.config(config.cloudinary);
 var requester = require('request');
 var _ = require('underscore');
 var request = require('../helpers/request');
-var fs = require('fs');
 
 router.post('/upload', function(req, res, next) {
 
 	var r = request.new(req, res);
 
 	var userID = r.body.userID;
-	//var base = 'data:image/jpg;base64,';
-	var buff = new Buffer(r.body.image, 'base64');
-	var path = 'uploads/' + new ObjectId() + '.jpg';
+	var base = 'data:image/png;base64,';
+	var dbID = new ObjectId();
 
-	fs.writeFile(path, buff, function(err) {
-		// upload to my server first to make sure request is fulfilled
-		if (err) { r.error(500, 'Error saving photo', userID, req.url); }
-		else {
+	cloudinary.v2.uploader.upload(base + r.body.image, { 
+		public_id: dbID 
+	}, function(error, result) {
+		if (!error) {
 			dbPhotos.put({
+				_id: dbID,
 				capturedBy: userID,
-				url: path,
 				capturedAt: r.body.capturedAt,
 				group: r.body.groupID
-			}, function(success, doc) {
-				if (success) r.success({}); 
-				else r.error(500, 'Error saving photo', userID, req.url);
-			});
+			}, function(success, doc) {});
 		}
 	});
 
+	r.success({});
 });
 
 router.get('/get', function(req, res, next) {
-
 	var r = request.new(req, res);
-
 	var photoID = req.query.photoid;
-
-	dbPhotos.get({ _id: ObjectId(photoID) }, function(success, result) {
-		if (success) {
-			var url = result.url;
-			//requester(url).pipe(res);
-			fs.createReadStream(url).pipe(res);
-		} else { r.error(500, 'Error retrieving image', null, req.url); }
-	});
-	// For now: if image does not exist, just send an image of no image
+	requester(config.cloudinaryURL + photoID).pipe(res);
 });
 
 router.get('/getAll', function(req, res, next) {
@@ -72,8 +58,12 @@ router.get('/getAll', function(req, res, next) {
 	dbPhotos.getMany({ group: groupID }, function(success, docs) {
 		if (success && docs.length != 0) {
 			r.success({
-				photoURLS: _.map(docs, function(doc) {
-					return config.appRootURL + '/api/photos/get?photoid=' + doc._id + '&token=' + token
+				photoURLS: _.sortBy(_.map(docs, function(doc) {
+					return config.appRootURL 
+					+ '/api/photos/get?photoid=' 
+					+ doc._id + '&token=' + token
+				}), function(photo) {
+					return photo.capturedAt
 				})
 			});
 		} else if (docs.length == 0) {
@@ -83,19 +73,3 @@ router.get('/getAll', function(req, res, next) {
 });
 
 module.exports = router;
-
-/*cloudinary.uploader.upload(path, function(error, result) {
-				if (error) { r.error(500, 'Error saving photo', userID, req.url); }
-				else {
-					fs.unlink(path);
-					dbPhotos.put({
-						capturedBy: userID,
-						url: result.secure_url,
-						capturedAt: r.body.capturedAt,
-						group: r.body.groupID
-					}, function(success, doc) {
-						if (success) r.success({}); 
-						else r.error(500, 'Error saving photo', userID, req.url);
-					});
-				}
-			});*/

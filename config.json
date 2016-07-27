@@ -8,7 +8,9 @@
 		"api_key": "959885279136482",
 		"api_secret": "RRBG_QIUP4FdPwveBqGA6ESoD20"
 	},
+	"cloudinaryURL": "https://res.cloudinary.com/photosharetest/",
 	"mongoURL": "mongodb://adminuser1:adminpasssheevs5609@ds033015.mlab.com:33015/mongodbtest1",
+	"localAppRootURL": "http://10.0.0.11:3000",
 	"appRootURL": "http://pictureus.herokuapp.com",
 	"jwtSecret": "LOLOL",
 	"cryptoKey": "LMAOWUZUP",
