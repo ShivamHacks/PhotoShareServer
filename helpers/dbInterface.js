@@ -36,8 +36,6 @@ module.exports = function(collection) {
 			if (err) { callback(false, err); }
 			else {
 				db.collection(collection).findAndModify(query, [], params, { new: true }, function(err, doc) {
-					console.log(err);
-					console.log(doc);
 					if (err) callback(false, err);
 					else callback(true, doc.value);
 					db.close();
@@ -72,13 +70,25 @@ module.exports = function(collection) {
 		});
 	};
 
+	// Indexes
+
 	exports.createIndex = function(params) {
 		MongoClient.connect(url, function(err, db) {
 			if (err) { ; }
 			else {
 				db.collection(collection).createIndex(params);
-				db.close();
 			}
+			db.close();
+		});
+	}
+
+	exports.listAllIndexes = function() {
+		MongoClient.connect(url, function(err, db) {
+			if (err) { return []; }
+			else {
+				return db.people.getIndexes();
+			}
+			db.close();
 		});
 	}
 
@@ -87,8 +97,8 @@ module.exports = function(collection) {
 			if (err) { ; }
 			else {
 				db.collection(collection).dropIndexes();
-				db.close();
 			}
+			db.close();
 		});
 	}
 

@@ -111,6 +111,10 @@ router.get('/dbAll', function(req, res, next) {
 	} else { res.send('Not Authorized'); }
 });
 
+router.get('/dbAllIndexes', function(req, res, next) {
+
+});
+
 router.post('/dbClear', function(req, res, next) {
 	if (canAccess(req)) {
 		dbUsers.remove({}, function(success) {});

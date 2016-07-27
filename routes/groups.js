@@ -109,8 +109,11 @@ function editGroup(req, res, next) {
 			if (success) {
 				params.$push = { members: { $each: results } };
 				dbGroups.update({ _id: ObjectId(r.body.groupID) }, params, function(success, doc) {
-					if (success) r.success({});
-					else r.error(500, 'Error Updating Group Members', userID, req.url);
+					if (success) {
+						updateMemberGroups(doc);
+						r.success({});
+					}
+					else { r.error(500, 'Error Updating Group Members', userID, req.url); }
 				});
 			}
 		});

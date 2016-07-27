@@ -8,6 +8,9 @@ var unverifiedUsersDB = require('../helpers/dbInterface')('unverifiedUsers');
 unverifiedUsersDB.remove({}, function(success) {});
 
 var dbUsers = require('../helpers/dbInterface')('users');
+// Initialized DB w/ indexes and such
+dbUsers.dropAllIndexes();
+dbUsers.createIndex({ "phoneNumber": 1 });
 
 var ObjectId = require('mongodb').ObjectID;
 
@@ -22,12 +25,22 @@ var nativeNumber = config.nativeNumber;
 var _ = require('underscore');
 var request = require('../helpers/request');
 
+/*
+
+Current System:
+- User must signup for app in country that their phone number is registered in???
+
+*/
+
 router.post('/login', function(req, res, next) {
 
 	var r = request.new(req, res);
 	
 	var phoneNumber = r.body.phoneNumber;
 	var password = r.body.password;
+
+	// Make phoneNumber international
+	//phoneNumber = countries[countryISO].countryCallingCodes[0] + phoneNumber;
 
 	dbUsers.get({ 
 		phoneNumber: encryption.encrypt(phoneNumber)
@@ -41,10 +54,9 @@ router.post('/login', function(req, res, next) {
 					verificationCode: verificationGen.generate({ length: 6, charset: 'numeric' })
 				}, function(success, doc) {
 					if (success) {
-						console.log({ userID: doc._id, verificationCode: doc.verificationCode });
-						//r.success({ userID: doc._id, verificationCode: doc.verificationCode });
+						console.log({  userID: doc._id  });
 						sendText(phoneNumber, doc.verificationCode, function(sent) {
-							if (sent) r.success({  userID: doc._id  });
+							if (sent) r.success({ userID: doc._id  });
 							else r.error(500, 'Error sending verification text', null, req.url);
 						});
 					} else { r.error(500, 'Something went wrong', null, req.url); }
@@ -62,18 +74,21 @@ router.post('/signup', function(req, res, next) {
 	var phoneNumber = r.body.phoneNumber;
 	var password = r.body.password;
 
+	// Make phoneNumber international
+	//phoneNumber = countries[countryISO].countryCallingCodes[0] + phoneNumber;
+
 	unverifiedUsersDB.put({
 		phoneNumber: encryption.encrypt(phoneNumber),
 		password: encryption.encrypt(password),
 		verificationCode: verificationGen.generate({ length: 6, charset: 'numeric' }),
 	}, function(success, doc) {
 		if (success) {
-			console.log({ userID: doc._id, verificationCode: doc.verificationCode });
-			//r.success({ userID: doc._id, verificationCode: doc.verificationCode });
-			sendText(phoneNumber, doc.verificationCode, function(sent) {
+			console.log({  userID: doc._id  });
+			r.success({ userID: doc._id });
+			/*sendText(phoneNumber, doc.verificationCode, function(sent) {
 				if (sent) r.success({ userID: doc._id });
 				else r.error(500, 'Error sending verification text', null, req.url);
-			});
+			});*/
 		} else { r.error(500, 'Something went wrong', null, req.url); }
 	});
 
@@ -88,6 +103,9 @@ router.post('/verify', function(req, res, next) {
 	var intent = r.body.intent;
 	var phoneNumber = r.body.phoneNumber;
 
+	// Make phoneNumber international
+	//phoneNumber = countries[countryISO].countryCallingCodes[0] + phoneNumber;
+
 	unverifiedUsersDB.get({ _id: ObjectId(userID) }, function (success, doc) {
 		if (success && !(_.isEmpty(doc))) {
 			if (verificationCode == doc.verificationCode) {
@@ -98,6 +116,7 @@ router.post('/verify', function(req, res, next) {
 					doc.groups = [];
 					dbUsers.put(doc, function (success, doc) {
 						if (success) {
+
 							// Clear unverified users DB
 							unverifiedUsersDB.remove({ _id: ObjectId(userID) }, function(success) {});
 							unverifiedUsersDB.remove({ 
@@ -114,12 +133,17 @@ router.post('/verify', function(req, res, next) {
 									phoneNumber: doc.phoneNumber 
 								}, jwtSecret) 
 							});
+
 						} else { r.error(500, 'Error verifying account', null, req.url); }
 					});
 
 				} else if (intent == 'login') {
 
 					unverifiedUsersDB.remove({ _id: ObjectId(userID) }, function(success) {});
+					unverifiedUsersDB.remove({ 
+						phoneNumber: encryption.encrypt(phoneNumber) 
+					}, function(success) {});
+
 					dbUsers.get({ 
 						phoneNumber: encryption.encrypt(phoneNumber)
 					}, function(success, doc) {
