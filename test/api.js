@@ -19,7 +19,7 @@
 // Dependencies
 var express = require('express');
 var router = express.Router();
-var config = require('../config');
+var config = require('../app.json');
 var encryption = require('../helpers/encryption');
 var ObjectID = require('mongodb').ObjectID;
 var jwt = require('jsonwebtoken');

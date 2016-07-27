@@ -1,5 +1,5 @@
 var crypto = require('crypto');
-var config = require('../config');
+var config = require('../app.json');
 var cryptoKey = config.cryptoKey;
 
 module.exports = {

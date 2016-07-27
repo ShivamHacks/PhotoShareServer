@@ -1,5 +1,5 @@
 var MongoClient = require('mongodb').MongoClient;
-var config = require('../config');
+var config = require('../app.json');
 var url = config.mongoURL;
 
 module.exports = function(collection) {

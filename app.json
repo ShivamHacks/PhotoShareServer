@@ -1,0 +1,18 @@
+{
+	"twilio": {
+		"accountSid": "ACf69d7acc3d174234af0de9d654b2f9d7",
+		"authToken": "8aecadf05b3d171f6cb23e5bac63a397"
+	},
+	"cloudinary": {
+		"cloud_name": "photosharetest",
+		"api_key": "959885279136482",
+		"api_secret": "RRBG_QIUP4FdPwveBqGA6ESoD20"
+	},
+	"mongoURL": "mongodb://adminuser1:adminpasssheevs5609@ds033015.mlab.com:33015/mongodbtest1",
+	"appRootURL": "http://pictureus.herokuapp.com",
+	"jwtSecret": "LOLOL",
+	"cryptoKey": "LMAOWUZUP",
+	"nativeNumber": "+17322106579",
+	"adminKey1": "supersecretKEY",
+	"adminKey2": "secondSuperSecretKey"
+}

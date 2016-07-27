@@ -1,6 +1,6 @@
 var express = require('express');
 var router = express.Router();
-var config = require('../config');
+var config = require('../app.json');
 // var errors = require('../errors'); // json document containing all errors
 
 var jwt = require('jsonwebtoken');
