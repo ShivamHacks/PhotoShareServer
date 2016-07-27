@@ -1,6 +1,6 @@
 var express = require('express');
 var router = express.Router();
-var config = require('../app.json');
+var config = require('../config');
 
 var countries = require('country-data').countries;
 
