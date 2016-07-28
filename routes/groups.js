@@ -142,7 +142,7 @@ function leaveGroup(req, res, next) {
 		if (success) {
 			if (_.isEmpty(doc)) { r.error(400, 'Group does not exist', userID, req.url); }
 			else {
-				if (doc.members.length == 0) deleteGroup(groupID, userID);
+				if (doc.members.length == 0) deleteGroup(groupID);
 				r.success({});
 			}
 		} else { r.error(500, 'Error leaving group', userID, req.url); }
@@ -182,7 +182,7 @@ function getMembers(members, callback) {
 		} else callback(false, null);
 	});
 }
-function deleteGroup(groupID, userID) {
+function deleteGroup(groupID) {
 	dbGroups.get({ _id: ObjectId(groupID) }, function(success, group) {
 		if (success) {
 			if (!(_.isEmpty(group))) {

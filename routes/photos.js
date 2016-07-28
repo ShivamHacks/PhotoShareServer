@@ -41,11 +41,11 @@ router.post('/upload', function(req, res, next) {
 	r.success({});
 });
 
-router.get('/get', function(req, res, next) {
+/*router.get('/get', function(req, res, next) {
 	var r = request.new(req, res);
 	var photoID = req.query.photoid;
 	requester(config.cloudinaryURL + photoID).pipe(res);
-});
+});*/
 
 router.get('/getAll', function(req, res, next) {
 
@@ -59,9 +59,10 @@ router.get('/getAll', function(req, res, next) {
 		if (success && docs.length != 0) {
 			r.success({
 				photoURLS: _.sortBy(_.map(docs, function(doc) {
-					return config.appRootURL 
+					return config.cloudinaryURL + doc._id;
+					/*return config.appRootURL 
 					+ '/api/photos/get?photoid=' 
-					+ doc._id + '&token=' + token
+					+ doc._id + '&token=' + token*/
 				}), function(photo) {
 					return photo.capturedAt
 				})

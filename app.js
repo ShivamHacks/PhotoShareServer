@@ -12,11 +12,8 @@ app.listen(process.env.PORT || '3000', function () {
 });
 
 app.use(morgan('dev'));
-app.use('/uploads', express.static(__dirname + '/uploads'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ limit: '5mb', extended: true }));
-
-// TODO: handle url that is not defined
 
 //app.use('/api', require('./test/api'));
 app.use('/api', require('./routes/authorize'));
@@ -41,11 +38,3 @@ app.use(function(err, req, res, next) {
 
 
 module.exports = app;
-
-// cool git tricks: add gitignore command (do this in project folder): touch .gitignore 
-// cool git tricks: to redo all git (in case you screwed up initial commit b/c didn't do gitignore properly) do : rm -rf .git/
-
-// currently encrypting phone numbers, so need to decrypt anytime need to do anything.
-
-// CURRENTLY ASSUMING that requests will only be coming from MY APP so I am not putting that much security into requests. Of course, they 
-// need a valid token, but apart from that, there is not too much security. Will be added in the future tho.

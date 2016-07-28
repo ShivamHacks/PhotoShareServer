@@ -44,6 +44,18 @@ module.exports = function(collection) {
 		});
 	};
 
+	/*exports.updateMany = function(query, params, callback) {
+		MongoClient.connect(url, function(err, db) {
+			if (err) { callback(false, err); }
+			else {
+				db.collection(collection).update(query, params, function(err, result) {
+					if (err) callback(false);
+					else callback(true);
+				})
+			}
+		});
+	};*/
+
 	exports.remove = function(obj, callback) {
 		MongoClient.connect(url, function(err, db) {
 			if (err) { callback(false, err); }
