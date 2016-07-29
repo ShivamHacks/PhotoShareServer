@@ -28,13 +28,6 @@ var nativeNumber = config.nativeNumber;
 var _ = require('underscore');
 var request = require('../helpers/request');
 
-/*
-
-Current System:
-- User must signup for app in country that their phone number is registered in???
-
-*/
-
 router.post('/login', function(req, res, next) {
 
 	var r = request.new(req, res);
@@ -97,43 +90,34 @@ router.post('/verify', function(req, res, next) {
 	var intent = r.body.intent;
 	var phoneNumber = r.body.phoneNumber;
 
-	unverifiedUsersDB.get({ _id: ObjectId(userID) }, function (success, doc) {
-		if (success && !(_.isEmpty(doc))) {
-			if (verificationCode == doc.verificationCode) {
-				delete doc.verificationCode;
+	unverifiedUsersDB.get({ _id: ObjectId(userID) }, function (success, result) {
+
+		if (success && !(_.isEmpty(result))) {
+			if (verificationCode == result.verificationCode) {
+				delete result.verificationCode;
+				delete result._id;
 
 				if (intent == 'signup') {
 
-					doc.groups = [];
-					dbUsers.put(doc, function (success, doc) {
+					dbUsers.remove({ phoneNumber: result.phoneNumber }, function(success) {
 						if (success) {
+							result.groups = [];
+							dbUsers.put(result, function (success, doc) {
+								if (success) {
 
-							// Clear unverified users DB
-							unverifiedUsersDB.remove({ _id: ObjectId(userID) }, function(success) {});
-							unverifiedUsersDB.remove({ 
-								phoneNumber: encryption.encrypt(phoneNumber) 
-							}, function(success) {});
+									r.success({
+										token: jwt.sign({ 
+											userID: doc._id, 
+											phoneNumber: doc.phoneNumber 
+										}, jwtSecret) 
+									});
 
-							dbUsers.remove({ phoneNumber: doc.phoneNumber, _id: { 
-								$ne: ObjectId(userID) } 
-							}, function(success) {});
-
-							r.success({
-								token: jwt.sign({ 
-									userID: doc._id, 
-									phoneNumber: doc.phoneNumber 
-								}, jwtSecret) 
+								} else { r.error(500, 'Error verifying account', null, req.url); }
 							});
-
 						} else { r.error(500, 'Error verifying account', null, req.url); }
 					});
 
 				} else if (intent == 'login') {
-
-					unverifiedUsersDB.remove({ _id: ObjectId(userID) }, function(success) {});
-					unverifiedUsersDB.remove({ 
-						phoneNumber: encryption.encrypt(phoneNumber) 
-					}, function(success) {});
 
 					dbUsers.get({ 
 						phoneNumber: encryption.encrypt(phoneNumber)
@@ -150,8 +134,11 @@ router.post('/verify', function(req, res, next) {
 
 				} else { r.error(400, 'Unknown login/signup intent', null, req.url); }
 
+				unverifiedUsersDB.remove({ _id: ObjectId(userID) }, function(success) {});
+
 			} else { r.error(400, 'Incorrect verification code', null, req.url); }
 		} else { r.error(500, 'Error verifying account', null, req.url); }
+
 	});
 
 });
@@ -161,7 +148,10 @@ router.post('/deleteAccount', function(req, res, next) {
 	var r = request.new(req, res);
 
 	var userID = r.body.userID;
-	
+
+	r.success({});
+
+
 	dbUsers.remove({ _id: ObjectId(userID) }, function(success) {});
 	dbGroups.getMany({ members: { $elemMatch: { userID: userID } } }, function(success, docs) {
 		if (success) {
@@ -177,18 +167,26 @@ router.post('/deleteAccount', function(req, res, next) {
 				});
 			}
 		}
-	})
-
-	r.success({});
+	});
 
 });
 
 function deleteGroup(groupID) {
+	// This works perfectly
 	dbGroups.get({ _id: ObjectId(groupID) }, function(success, group) {
 		if (success) {
 			if (!(_.isEmpty(group))) {
-				dbGroups.remove({ _id: ObjectId(groupID) }, function(success) {});
-				dbPhotos.remove({ group: ObjectId(groupID).valueOf() }, function(success) {});
+
+				dbGroups.remove({
+					_id: ObjectId(groupID) 
+				}, function(success) {});
+
+				dbPhotos.remove({ 
+					group: groupID 
+				}, function(success) {});
+
+				cloudinary.api.delete_resources_by_prefix(groupID, function(result) {});
+
 			}
 		}
 	});

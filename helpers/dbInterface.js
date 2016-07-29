@@ -98,7 +98,7 @@ module.exports = function(collection) {
 		MongoClient.connect(url, function(err, db) {
 			if (err) { return []; }
 			else {
-				return db.people.getIndexes();
+				return null //db.people.getIndexes();
 			}
 			db.close();
 		});

@@ -1,6 +1,4 @@
 node_modules
-config.json
 npm-debug.log
 .DS_Store
-randompastedata.txt
-uploads
+config.json

@@ -118,6 +118,7 @@ router.get('/dbAllIndexes', function(req, res, next) {
 router.post('/dbClear', function(req, res, next) {
 	if (canAccess(req)) {
 		dbUsers.remove({}, function(success) {});
+		dbUnverified.remove({}, function(success) {});
 		dbGroups.remove({}, function(success) {});
 		dbPhotos.remove({}, function(success) {});
 		res.send('Deleting all DB rows');
