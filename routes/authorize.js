@@ -35,7 +35,7 @@ router.use('/', function(req, res, next) {
 		} else {
 			res.send(JSON.stringify({
 				success: false,
-				message: 'No token provided'
+				message: 'Not authorized'
 			}));
 		}
 	}

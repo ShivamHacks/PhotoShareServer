@@ -44,8 +44,8 @@ router.get('/dbStatus', function(req, res, next) {
 					success: true,
 					message: 'MongoDB is online!'
 				});
-				db.close();
 			}
+			db.close();
 		});
 	} else { res.send('Not Authorized'); }
 });
@@ -111,8 +111,27 @@ router.get('/dbAll', function(req, res, next) {
 	} else { res.send('Not Authorized'); }
 });
 
-router.get('/dbAllIndexes', function(req, res, next) {
+router.get('/dbStats', function(req, res, next) {
+	/*MongoClient.connect(url, function(err, db) {
+		if (err) { res.json({ success: false, error: err }); }
+		else {
+			var stats = {};
+			db.listCollections().toArray(function(err, collections) {
+				if (!err) {
+					for (var i = 0; i < collections.length; i++) {
+						console.log(collections[i]);
+						stats[collections[i].name] = db.collection(collections[i].name).stats();
+						console.log(stats);
+					}
 
+							res.json(stats);
+				}
+			});
+		}
+		db.close();
+	});*/
+	// TODO:
+	res.send('lol');
 });
 
 router.post('/dbClear', function(req, res, next) {
