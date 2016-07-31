@@ -163,7 +163,7 @@ function leaveGroup(req, res, next) {
 		_id: ObjectId(r.body.groupID) 
 	}, groupParams, function(success, doc) {
 		if (success) {
-			if (!_isEmpty(doc)) {
+			if (!_.isEmpty(doc)) {
 				if (doc.members.length == 0) deleteGroup(groupID);
 			}
 			r.success({});

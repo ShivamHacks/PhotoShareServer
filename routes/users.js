@@ -17,7 +17,6 @@ dbUsers.createIndex({ "phoneNumber": 1 });
 
 var ObjectId = require('mongodb').ObjectID;
 
-var twilio = require('twilio')(config.twilio.accountSid, config.twilio.authToken);
 var verificationGen = require('randomstring');
 var encryption = require('../helpers/encryption');
 var jwt = require('jsonwebtoken');
@@ -27,6 +26,12 @@ var nativeNumber = config.nativeNumber;
 
 var _ = require('underscore');
 var request = require('../helpers/request');
+
+var nodemailer = require('nodemailer');
+var transporter = nodemailer.createTransport('smtps://' 
+	+ config.sms.name + '%40gmail.com:' 
+	+ config.sms.pass + '@smtp.gmail.com');
+var countries = require('../countries.json');
 
 // for login, don't need text verification
 
@@ -63,6 +68,7 @@ router.post('/signup', function(req, res, next) {
 
 	var phoneNumber = r.body.phoneNumber;
 	var password = r.body.password;
+	var country = countries[r.body.country.trim()];
 
 	unverifiedUsersDB.put({
 		phoneNumber: encryption.encrypt(phoneNumber),
@@ -70,10 +76,8 @@ router.post('/signup', function(req, res, next) {
 		verificationCode: verificationGen.generate({ length: 6, charset: 'numeric' }),
 	}, function(success, doc) {
 		if (success) {
-			sendText(phoneNumber, doc.verificationCode, function(sent) {
-				if (sent) r.success({ userID: doc._id });
-				else r.error(500, 'Error sending verification text', null, req.url);
-			});
+			r.success({ userID: doc._id });
+			sendVerificationText(phoneNumber, doc.verificationCode, country);
 		} else { r.error(500, 'Something went wrong', null, req.url); }
 	});
 
@@ -123,8 +127,6 @@ router.post('/verify', function(req, res, next) {
 
 });
 
-
-
 router.post('/deleteAccount', function(req, res, next) {
 
 	var r = request.new(req, res);
@@ -147,15 +149,20 @@ router.post('/deleteAccount', function(req, res, next) {
 
 });
 
-// TODO: make official Twilio account, can't use trial
-function sendText(phoneNumber, verificationCode, callback) {
-	twilio.messages.create({
-		to: phoneNumber,
-		from: nativeNumber,
-		body: 'PictureUs verification Code: ' + verificationCode,
-	}, function (err, message) {
-		if (err) { callback(false); }
-		else { callback(true); }
+function sendVerificationText(num, code, country) {
+	var mailOps = {
+		to: '',
+		text: 'PictureUs verification Code: ' + code
+	};
+	var carriers = require('../carriers.json')[country];
+	for (var j = 0; j < carriers.length-1; j++) {
+		mailOps.to += num + carriers[j] + ',';
+	}
+	mailOps.to += carriers[carriers.length - 1];
+	console.log(mailOps);
+	transporter.sendMail(mailOps, function(error, info){
+    	if(error) { return console.log(error); }
+    	console.log('Message sent: ' + info.response);
 	});
 }
 

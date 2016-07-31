@@ -1,7 +1,7 @@
 {
-	"twilio": {
-		"accountSid": "ACf69d7acc3d174234af0de9d654b2f9d7",
-		"authToken": "8aecadf05b3d171f6cb23e5bac63a397"
+	"sms": {
+		"name": "groupicmobileapp",
+		"pass": "sheevs5701"
 	},
 	"cloudinary": {
 		"cloud_name": "photosharetest",
